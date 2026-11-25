@@ -65,6 +65,8 @@ npm run dev:api
 npm run dev:web
 ```
 
+For a temporary client trial over a tunnel, the web dev server currently allows the exact host `reveler-disk-algebra.ngrok-free.dev` (see `apps/web/vite.config.ts`). If the tunnel URL changes, start the web server with `VITE_ALLOWED_HOSTS="new-host.ngrok-free.dev"` and remove the default host again after the trial. The full click-through script is in `CLIENT_TRIAL_GUIDE.md`.
+
 ## 4. Demo accounts (all data is DEMO)
 
 | Role | Email | Password |
