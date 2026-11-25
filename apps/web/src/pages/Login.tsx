@@ -4,6 +4,7 @@ import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { Alert, Button, Card, Field, TextInput } from '../components/ui';
 import { errorMessage, useAuth } from '../context/AuthContext';
+import { usePublicConfig } from '../hooks/usePublicConfig';
 
 const demoAccounts = [
   { label: 'طالب', email: 'student@samuelacademy.com', password: 'Student@12345' },
@@ -12,6 +13,8 @@ const demoAccounts = [
 
 export default function Login() {
   const { login } = useAuth();
+  const config = usePublicConfig();
+  const showDemoAccounts = config.data?.demoMode === true;
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('');
@@ -44,23 +47,27 @@ export default function Login() {
         <Logo />
         <h1 className="mt-10 text-3xl font-extrabold leading-snug text-navy">أهلاً بعودتك 👋</h1>
         <p className="mt-4 max-w-md text-sm leading-loose text-muted">سجّل الدخول لمتابعة دروسك، مراجعة درجاتك، أو إدارة المحتوى والطلبات من لوحة التحكم.</p>
-        <div className="mt-9 space-y-4">
-          {demoAccounts.map((account) => (
-            <button
-              key={account.email}
-              onClick={() => { setEmail(account.email); setPassword(account.password); }}
-              className="flex w-full max-w-md items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 text-right transition hover:border-teal"
-            >
-              <div>
-                <p className="text-xs font-bold text-teal-dark">حساب {account.label} التجريبي · DEMO</p>
-                <p className="code-ltr mt-1 text-sm text-navy">{account.email}</p>
-                <p className="code-ltr text-xs text-muted">{account.password}</p>
-              </div>
-              <span className="rounded-lg bg-gold-light px-2.5 py-1 text-[10px] font-extrabold text-amber-800">DEMO</span>
-            </button>
-          ))}
-        </div>
-        <p className="mt-5 max-w-md text-xs leading-relaxed text-muted">اضغط على أي حساب لتعبئة البيانات تلقائياً ثم اضغط «تسجيل الدخول».</p>
+        {showDemoAccounts && (
+          <>
+            <div className="mt-9 space-y-4">
+              {demoAccounts.map((account) => (
+                <button
+                  key={account.email}
+                  onClick={() => { setEmail(account.email); setPassword(account.password); }}
+                  className="flex w-full max-w-md items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 text-right transition hover:border-teal"
+                >
+                  <div>
+                    <p className="text-xs font-bold text-teal-dark">حساب {account.label} التجريبي · DEMO</p>
+                    <p className="code-ltr mt-1 text-sm text-navy">{account.email}</p>
+                    <p className="code-ltr text-xs text-muted">{account.password}</p>
+                  </div>
+                  <span className="rounded-lg bg-gold-light px-2.5 py-1 text-[10px] font-extrabold text-amber-800">DEMO</span>
+                </button>
+              ))}
+            </div>
+            <p className="mt-5 max-w-md text-xs leading-relaxed text-muted">اضغط على أي حساب لتعبئة البيانات تلقائياً ثم اضغط «تسجيل الدخول».</p>
+          </>
+        )}
         <p className="mt-3 max-w-md rounded-xl bg-gold-light p-3 text-xs leading-relaxed text-amber-900">
           الحسابات الجديدة تبدأ بحالة <strong>Pending</strong> ولا يمكن تسجيل الدخول قبل موافقة الإدارة.
         </p>
@@ -92,14 +99,16 @@ export default function Login() {
           <Button type="submit" loading={loading} className="w-full">تسجيل الدخول <ArrowLeft className="h-4 w-4" /></Button>
         </form>
 
-        <div className="mt-6 space-y-3 md:hidden">
-          {demoAccounts.map((account) => (
-            <button key={account.email} onClick={() => { setEmail(account.email); setPassword(account.password); }} className="w-full rounded-xl bg-canvas p-3 text-right text-xs">
-              <span className="font-extrabold text-teal-dark">DEMO · {account.label}</span>
-              <span className="code-ltr mr-2 text-muted">{account.email}</span>
-            </button>
-          ))}
-        </div>
+        {showDemoAccounts && (
+          <div className="mt-6 space-y-3 md:hidden">
+            {demoAccounts.map((account) => (
+              <button key={account.email} onClick={() => { setEmail(account.email); setPassword(account.password); }} className="w-full rounded-xl bg-canvas p-3 text-right text-xs">
+                <span className="font-extrabold text-teal-dark">DEMO · {account.label}</span>
+                <span className="code-ltr mr-2 text-muted">{account.email}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         <p className="mt-7 text-center text-sm text-muted">ليس لديك حساب؟ <Link to="/register" className="font-extrabold text-teal-dark hover:underline">أنشئ حساب طالب</Link></p>
       </Card>

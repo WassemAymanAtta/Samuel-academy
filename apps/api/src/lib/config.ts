@@ -2,8 +2,16 @@ import dotenv from 'dotenv';
 import fs from 'node:fs';
 import path from 'node:path';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
+// Load environment-specific overrides first: dotenv never overwrites an
+// existing value, so .env.production wins over the local demo .env.
+const envFiles = [
+  ...(process.env.NODE_ENV ? [`.env.${process.env.NODE_ENV}`, `../../.env.${process.env.NODE_ENV}`] : []),
+  '.env',
+  '../../.env',
+];
+for (const file of envFiles) {
+  dotenv.config({ path: path.resolve(process.cwd(), file) });
+}
 
 // In tests we point Prisma at the separate test database before the client is created.
 if (process.env.NODE_ENV === 'test' && process.env.TEST_DATABASE_URL) {
@@ -37,11 +45,54 @@ if (jwtSecret.length < 16 || /change-this/i.test(jwtSecret)) {
   throw new Error('JWT_SECRET must be a long random value (at least 16 chars, not a placeholder)');
 }
 
+const isProduction = process.env.NODE_ENV === 'production';
+const demoMode = process.env.DEMO_MODE !== 'false';
+if (isProduction && demoMode) {
+  throw new Error('DEMO_MODE="false" is required in production so demo logins are never exposed');
+}
+
+function databaseName(url: string): string {
+  try {
+    return decodeURIComponent(new URL(url).pathname.replace(/^\//, ''));
+  } catch {
+    return '';
+  }
+}
+const demoDatabases = new Set(['samuel_academy', 'samuel_academy_test']);
+if (isProduction && demoDatabases.has(databaseName(process.env.DATABASE_URL ?? ''))) {
+  throw new Error('Refusing to start in production against a demo database; set DATABASE_URL to the production database');
+}
+
+// Demo data keeps the well-known credentials for the trial. Production must
+// name the one admin account that the bootstrap script creates, and supply a
+// strong password. These values are never exposed by the public config route.
+function bootstrapAdmin(name: string, demoValue: string): string {
+  if (demoMode) return demoValue;
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} must be set when DEMO_MODE=false`);
+  return value;
+}
+
+const adminEmail = bootstrapAdmin('ADMIN_EMAIL', 'admin@samuelacademy.com').trim().toLowerCase();
+const adminPassword = bootstrapAdmin('ADMIN_PASSWORD', 'Admin@12345');
+
+if (!demoMode) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) throw new Error('ADMIN_EMAIL must be a valid email address');
+  if (['student@samuelacademy.com', 'demo@samuelacademy.com'].includes(adminEmail)) {
+    throw new Error('ADMIN_EMAIL must not be a demo student account');
+  }
+  if (adminPassword.length < 12 || /change-this|Admin@12345/i.test(adminPassword)) {
+    throw new Error('ADMIN_PASSWORD must be at least 12 chars and must not be a demo/placeholder password');
+  }
+}
+
 export const config = {
   port: Number(process.env.PORT ?? 4000),
   webOrigin: required('WEB_ORIGIN', 'http://localhost:5173'),
   jwtSecret,
-  demoMode: process.env.DEMO_MODE !== 'false',
+  isProduction,
+  demoMode,
+  admin: { email: adminEmail, password: adminPassword },
   paymentDetails: {
     instapay: required('DEMO_PAYMENT_INSTAPAY', 'DEMO - InstaPay alias: 01000000000'),
     ewallet: required('DEMO_PAYMENT_EWALLET', 'DEMO - Vodafone Cash: 01000000000'),

@@ -167,4 +167,11 @@ describe('Security regressions', { concurrency: false }, () => {
     assert.equal((await request(app).get(`/api/admin/overview?token=${encodeURIComponent(token)}`)).status, 401);
     assert.equal((await request(app).get(`/api/files/missing?token=${encodeURIComponent(token)}`)).status, 404);
   });
+
+  it('marks public config no-store so browsers never return an empty 304 body', async () => {
+    const response = await request(app).get('/api/auth/config');
+    assert.equal(response.status, 200);
+    assert.match(response.headers['cache-control'] ?? '', /no-store/);
+    assert.equal(response.body.demoMode, true);
+  });
 });

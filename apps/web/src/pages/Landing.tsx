@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, BadgeCheck, BookOpen, CheckCircle2, ClipboardCheck, Code2, GraduationCap, PlayCircle, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
-import { DemoBadge } from '../components/Layouts';
 import { Logo } from '../components/Logo';
 import { Badge, Button, Card } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../context/ThemeContext';
+import { usePublicConfig } from '../hooks/usePublicConfig';
 
 const features = [
   { icon: BookOpen, title: 'محتوى منظّم', text: 'مادة ← كورس ← وحدة ← درس، مع تقدّم واضح لكل خطوة.' },
@@ -15,6 +15,8 @@ const features = [
 
 export default function Landing() {
   const { user } = useAuth();
+  const config = usePublicConfig();
+  const showDemoAccounts = config.data?.demoMode === true;
   const home = user?.role === 'ADMIN' ? '/admin' : '/app';
 
   return (
@@ -127,33 +129,35 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="demo" className="bg-navy py-16 text-white">
-        <div className="mx-auto max-w-7xl px-5 md:px-9">
-          <div className="mb-9 text-center">
-            <h2 className="text-2xl font-extrabold md:text-3xl">جرّب المنصة فوراً بحسابات تجريبية</h2>
-            <p className="mt-2 text-sm text-slate-300">جميع البيانات وأرقام الدفع أدناه تجريبية بالكامل — DEMO</p>
+      {showDemoAccounts && (
+        <section id="demo" className="bg-navy py-16 text-white">
+          <div className="mx-auto max-w-7xl px-5 md:px-9">
+            <div className="mb-9 text-center">
+              <h2 className="text-2xl font-extrabold md:text-3xl">جرّب المنصة فوراً بحسابات تجريبية</h2>
+              <p className="mt-2 text-sm text-slate-300">جميع البيانات وأرقام الدفع أدناه تجريبية بالكامل — DEMO</p>
+            </div>
+            <div className="grid gap-5 md:grid-cols-2">
+              {[
+                { role: 'طالب', email: 'student@samuelacademy.com', pass: 'Student@12345', icon: GraduationCap },
+                { role: 'مدير / معلم', email: 'admin@samuelacademy.com', pass: 'Admin@12345', icon: ShieldCheck },
+              ].map(({ role, email, pass, icon: Icon }) => (
+                <Card key={role} className="border-0 bg-white/5 p-6 text-white backdrop-blur">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-extrabold"><Icon className="h-5 w-5 text-gold" /> {role}</div>
+                    <Badge>DEMO</Badge>
+                  </div>
+                  <p className="code-ltr text-sm text-slate-200">{email}</p>
+                  <p className="code-ltr mt-1 text-sm text-slate-200">{pass}</p>
+                  <Link to="/login" className="mt-5 inline-block"><Button variant="gold" size="sm">تسجيل الدخول</Button></Link>
+                </Card>
+              ))}
+            </div>
+            <p className="mt-8 text-center text-xs text-slate-300">
+              ملاحظة: لا يتم التحقق تلقائياً من تحويلات InstaPay في هذه النسخة. المراجعة يدوية بالكامل.
+            </p>
           </div>
-          <div className="grid gap-5 md:grid-cols-2">
-            {[
-              { role: 'طالب', email: 'student@samuelacademy.com', pass: 'Student@12345', icon: GraduationCap },
-              { role: 'مدير / معلم', email: 'admin@samuelacademy.com', pass: 'Admin@12345', icon: ShieldCheck },
-            ].map(({ role, email, pass, icon: Icon }) => (
-              <Card key={role} className="border-0 bg-white/5 p-6 text-white backdrop-blur">
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-extrabold"><Icon className="h-5 w-5 text-gold" /> {role}</div>
-                  <DemoBadge />
-                </div>
-                <p className="code-ltr text-sm text-slate-200">{email}</p>
-                <p className="code-ltr mt-1 text-sm text-slate-200">{pass}</p>
-                <Link to="/login" className="mt-5 inline-block"><Button variant="gold" size="sm">تسجيل الدخول</Button></Link>
-              </Card>
-            ))}
-          </div>
-          <p className="mt-8 text-center text-xs text-slate-300">
-            ملاحظة: لا يتم التحقق تلقائياً من تحويلات InstaPay في هذه النسخة. المراجعة يدوية بالكامل.
-          </p>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

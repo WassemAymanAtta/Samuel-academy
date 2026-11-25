@@ -41,6 +41,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${BASE}${path}`, {
     ...options,
     credentials: 'include',
+    cache: 'no-store',
     headers: {
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),

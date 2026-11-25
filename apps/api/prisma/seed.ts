@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { prisma } from '../src/lib/prisma';
+import { config } from '../src/lib/config';
 
 function assertDemoSeedTarget() {
   if (process.env.NODE_ENV === 'production') {
@@ -41,7 +42,7 @@ async function main() {
   await prisma.user.deleteMany();
 
   const [adminHash, studentHash, secondStudentHash, pendingHash, rejectedHash] = await Promise.all([
-    bcrypt.hash('Admin@12345', 12),
+    bcrypt.hash(config.admin.password, 12),
     bcrypt.hash('Student@12345', 12),
     bcrypt.hash('Demo@12345', 12),
     bcrypt.hash('Pending@12345', 12),
@@ -51,7 +52,7 @@ async function main() {
   const admin = await prisma.user.create({
     data: {
       name: 'أحمد مدير صموئيل أكاديمي',
-      email: 'admin@samuelacademy.com',
+      email: config.admin.email,
       passwordHash: adminHash,
       role: 'ADMIN',
       phone: '01000000001',
@@ -566,7 +567,7 @@ async function main() {
   });
 
   console.log('Demo seed complete.');
-  console.log('Admin: admin@samuelacademy.com / Admin@12345');
+  console.log(`Admin: ${config.admin.email} / ${config.admin.password}`);
   console.log('Student: student@samuelacademy.com / Student@12345');
 }
 

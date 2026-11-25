@@ -67,7 +67,25 @@ npm run dev:web
 
 For a temporary client trial over a tunnel, the web dev server currently allows the exact host `reveler-disk-algebra.ngrok-free.dev` (see `apps/web/vite.config.ts`). If the tunnel URL changes, start the web server with `VITE_ALLOWED_HOSTS="new-host.ngrok-free.dev"` and remove the default host again after the trial. The full click-through script is in `CLIENT_TRIAL_GUIDE.md`.
 
-## 4. Demo accounts (all data is DEMO)
+## 4. Production admin login
+
+The credentials in section 5 are for the local demo trial only. For production:
+
+1. Create a gitignored `.env.production` in the project root with `DEMO_MODE="false"`, the real `DATABASE_URL`, `WEB_ORIGIN`, a fresh `JWT_SECRET`, and the single admin account `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+2. Apply migrations and create/update only that admin (no data deletion):
+
+   ```powershell
+   $env:NODE_ENV='production'
+   npm run build
+   npm run db:migrate
+   npm run db:bootstrap-admin
+   ```
+
+3. Start the API with `NODE_ENV=production` still set: `npm run start -w apps/api`. Serve the built web app from `apps/web/dist` with your normal host.
+
+The admin logs in at `/login` with `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Demo credential cards on the landing page and login page are rendered **only** when `DEMO_MODE=true`, so the production password is never sent to the browser. The API refuses to start in production if `DEMO_MODE` is missing/true, if `DATABASE_URL` points at a demo database, or if admin credentials are missing/placeholder values. Never share the production admin credentials with students.
+
+## 5. Demo accounts (all data is DEMO)
 
 | Role | Email | Password |
 |---|---|---|
@@ -104,7 +122,7 @@ Sample payment instructions (shown in the UI, configurable via env):
 
 **No real money should be sent.** The system never verifies InstaPay transfers automatically; an admin reviews each request manually. No payment credentials or banking secrets are stored.
 
-## 5. Useful commands
+## 6. Useful commands
 
 ```bash
 npm run build          # builds API and web for production
@@ -116,7 +134,7 @@ npm run db:reset       # reset database, migrations + seed
 
 Tests use the separate `samuel_academy_test` database and apply migrations automatically. `JWT_SECRET` must be set to a long random value (no fallback secret); `WEB_ORIGIN` must be an explicit origin list (`*` is rejected because cookies are credentialed).
 
-## 6. What is implemented
+## 7. What is implemented
 
 ### Student
 - Register / login / logout with httpOnly JWT cookie and bcrypt password hashing. New students are `PENDING` and see a clear approval message until activated.
@@ -151,7 +169,7 @@ Tests use the separate `samuel_academy_test` database and apply migrations autom
 - CORS limited to `WEB_ORIGIN`, secure cookie flag in production, environment-based secrets.
 - Modular backend (`lib`, `routes`, `services`) and page-based frontend structure.
 
-## 7. Hierarchy and access rules
+## 8. Hierarchy and access rules
 
 `Subject → Course → Unit → Lesson`, with exams attached to a unit or lesson.
 
@@ -162,9 +180,9 @@ A lesson is unlocked when the student has an active grant for:
 
 Exams additionally support a dedicated exam-package product. Expired grants no longer unlock content; grants without `durationDays` are permanent. Passing an exam is **not** required to open the next lesson.
 
-## 8. Tests
+## 9. Tests
 
-`npm test` runs 22 tests:
+`npm test` runs 27 tests:
 
 1. Pending registration, blocked login, admin approval, then successful login
 2. student blocked from admin API, admin allowed
@@ -188,8 +206,13 @@ Exams additionally support a dedicated exam-package product. Expired grants no l
 20. PDF upload and external URL can both be configured, and unauthorized students get `403` even with the direct file URL
 21. a second device with the correct password is rejected, while the first device's token stays valid
 22. logout revokes the old token immediately and clears the device binding
+23. production config uses the configured admin account and disables demo mode
+24. production refuses to start against a demo database
+25. production refuses `DEMO_MODE=true`
+26. production requires a non-placeholder admin password
+27. public API responses carry `Cache-Control: no-store` so a cached `304` cannot become an empty config payload
 
-## 9. Deliberately postponed
+## 10. Deliberately postponed
 
 - Real payment gateway / InstaPay verification (manual MVP only).
 - Email/SMS notifications and password reset.
@@ -199,7 +222,7 @@ Exams additionally support a dedicated exam-package product. Expired grants no l
 - Rate limiting, audit logs, and production deployment configuration.
 - A UI for admins to force-release another user's device binding, and exam attempt idempotency keys, are still open items (see `QA_REVIEW_REPORT.md`). Server-side logout revocation is implemented.
 
-## 10. Project structure
+## 11. Project structure
 
 ```
 apps/api/
@@ -218,12 +241,12 @@ apps/web/
 .env.example
 ```
 
-## 11. Final verification (this machine)
+## 12. Final verification (this machine)
 
 The demo was started with `npm run dev` and last verified on **2026-11-25** after the QA/security fixes and the requested features:
 
 - `npm run build` ✅ API + web production builds succeeded.
-- `npm test` ✅ 22/22 tests passed (auth/RBAC, payments, access, uploads, 8 security regressions, single-device and PDF regressions).
+- `npm test` ✅ 27/27 tests passed (auth/RBAC, payments, access, uploads, 9 security regressions, single-device, PDF and production-admin config regressions).
 - `npm run db:migrate` ✅ 6 migrations applied; no pending migrations.
 - Pre-change source and DB snapshot are preserved under `D:\Temp\opencode\samuel-academy-backup-20261125-014426`; Math removal used the opt-in surgical script `apps/api/scripts/remove-math.ts`, not `db:reset`.
 - `GET http://localhost:4000/api/health` → `{"ok":true,"service":"samuel-academy-api"}`.

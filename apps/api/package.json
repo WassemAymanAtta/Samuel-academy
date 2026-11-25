@@ -10,6 +10,7 @@
     "db:migrate": "prisma migrate deploy && prisma generate",
     "db:migration:create": "prisma migrate dev --create-only",
     "db:seed": "tsx prisma/seed.ts",
+    "db:bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
     "db:remove-math": "tsx scripts/remove-math.ts",
     "db:reset": "prisma migrate reset --force",
     "test": "cross-env NODE_ENV=test tsx --test --test-concurrency=1 tests/*.test.ts"

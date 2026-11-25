@@ -1,6 +1,7 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, FileText, Layers, Pencil, Plus, Trash2, Upload, Video, X } from 'lucide-react';
+import { usePublicConfig } from '../../hooks/usePublicConfig';
 import { ApiError, api, queryKeys } from '../../lib/api';
 import { Alert, Badge, Button, Card, Field, Modal, PageHeader, Select, Spinner, TextArea, TextInput } from '../../components/ui';
 
@@ -108,10 +109,7 @@ export default function Content() {
   const [uploading, setUploading] = useState(false);
 
   const tree = useQuery({ queryKey: queryKeys.adminContent, queryFn: () => api.get<ContentTree>('/api/admin/content') });
-  const uploadConfig = useQuery({
-    queryKey: ['auth-config'],
-    queryFn: () => api.get<{ maxUploadBytes: number; maxMediaBytes: number }>('/api/auth/config'),
-  });
+  const uploadConfig = usePublicConfig();
   const maxUploadBytes = uploadConfig.data?.maxUploadBytes ?? 20 * 1024 * 1024;
   const maxMediaBytes = uploadConfig.data?.maxMediaBytes ?? 200 * 1024 * 1024;
 

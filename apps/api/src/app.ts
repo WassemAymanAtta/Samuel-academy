@@ -26,6 +26,12 @@ export function createApp() {
       credentials: true,
     }),
   );
+  // JSON API responses must never be served from a browser cache: a 304 with
+  // an empty body would otherwise be parsed as an empty payload by the client.
+  app.use('/api', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+  });
   app.use(express.json({ limit: '1mb' }));
   app.use(
     '/api/admin/uploads/pdf',

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Clock3, CreditCard, Package, XCircle } from 'lucide-react';
+import { usePublicConfig } from '../../hooks/usePublicConfig';
 import { ApiError, api, queryKeys } from '../../lib/api';
 import { Alert, Badge, Button, Card, EmptyState, Field, Modal, PageHeader, Select, Spinner, TextArea, TextInput, formatDate, formatMoney } from '../../components/ui';
 
@@ -13,8 +14,6 @@ interface Payment {
   product: Product; accessGrant: { id: string; expiresAt: string | null } | null;
 }
 interface Grant { id: string; product: Product; grantedAt: string; expiresAt: string | null }
-interface PublicConfig { demoMode: boolean; paymentDetails: { instapay: string; ewallet: string } }
-
 const typeLabels: Record<string, string> = { MONTHLY: 'اشتراك شهري', TERM: 'اشتراك فصلي', UNIT: 'وحدة', LESSON: 'درس', EXAM_PACKAGE: 'باقة أسئلة' };
 const statusLabels: Record<string, string> = { PENDING: 'قيد المراجعة', APPROVED: 'معتمد', REJECTED: 'مرفوض' };
 const methodLabels: Record<string, string> = { INSTAPAY: 'InstaPay', EWALLET: 'محفظة إلكترونية' };
@@ -30,7 +29,7 @@ export default function Purchases() {
 
   const products = useQuery({ queryKey: queryKeys.products, queryFn: () => api.get<{ products: Product[] }>('/api/products') });
   const payments = useQuery({ queryKey: queryKeys.payments, queryFn: () => api.get<{ payments: Payment[] }>('/api/me/payments') });
-  const config = useQuery({ queryKey: ['public-config'], queryFn: () => api.get<PublicConfig>('/api/auth/config') });
+  const config = usePublicConfig();
   const access = useQuery({ queryKey: ['my-access'], queryFn: () => api.get<{ grants: Grant[] }>('/api/student/me/access') });
 
   const submit = useMutation({
