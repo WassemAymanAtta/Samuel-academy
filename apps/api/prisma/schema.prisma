@@ -1,0 +1,305 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum AccountStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+}
+
+enum ProductType {
+  MONTHLY
+  TERM
+  UNIT
+  LESSON
+  EXAM_PACKAGE
+}
+
+enum PaymentMethod {
+  INSTAPAY
+  EWALLET
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum QuestionType {
+  MCQ
+  TRUE_FALSE
+  MULTIPLE_SELECT
+  SHORT_ANSWER
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  passwordHash   String
+  name           String
+  phone          String?
+  role           Role            @default(STUDENT)
+  status          AccountStatus   @default(ACTIVE)
+  sessionVersion  Int             @default(0)
+  sessionDeviceId String?
+  createdAt       DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  paymentRequests PaymentRequest[]
+  reviewedPayments PaymentRequest[] @relation("ReviewedPayments")
+  accessGrants   AccessGrant[]
+  lessonProgress LessonProgress[]
+  examAttempts   ExamAttempt[]
+  uploadedFiles  FileAsset[]     @relation("UploadedFiles")
+}
+
+model FileAsset {
+  id            String   @id @default(cuid())
+  originalName  String
+  storedName    String   @unique
+  mimeType      String
+  sizeBytes     Int
+  uploadedById  String?
+  createdAt     DateTime @default(now())
+  uploadedBy    User?    @relation("UploadedFiles", fields: [uploadedById], references: [id], onDelete: SetNull)
+  pdfLessons    Lesson[] @relation("LessonPdfFile")
+  mediaLessons  Lesson[] @relation("LessonMediaFile")
+  units         Unit[]
+  courses       Course[]
+
+  @@index([uploadedById])
+}
+
+model Subject {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  icon        String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  courses     Course[]
+  products    Product[]
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  subjectId   String
+  title       String
+  slug        String   @unique
+  description String?
+  level       String?
+  pdfUrl      String?
+  pdfFileId   String?
+  pdfTitle    String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  pdfFile     FileAsset? @relation(fields: [pdfFileId], references: [id], onDelete: SetNull)
+  units       Unit[]
+  products    Product[]
+
+  @@index([subjectId])
+  @@index([pdfFileId])
+}
+
+model Unit {
+  id          String   @id @default(cuid())
+  courseId    String
+  title       String
+  description String?
+  pdfUrl      String?
+  pdfFileId   String?
+  pdfTitle    String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  pdfFile     FileAsset? @relation(fields: [pdfFileId], references: [id], onDelete: SetNull)
+  lessons     Lesson[]
+  exams       Exam[]
+  products    Product[]
+
+  @@index([courseId])
+  @@index([pdfFileId])
+}
+
+model Lesson {
+  id              String   @id @default(cuid())
+  unitId          String
+  title           String
+  description     String?
+  videoUrl        String?
+  pdfUrl          String?
+  pdfFileId       String?
+  pdfTitle        String?
+  mediaTitle      String?
+  durationMinutes Int?
+  sortOrder       Int      @default(0)
+  isPublished     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  unit            Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  pdfFile         FileAsset? @relation("LessonPdfFile", fields: [pdfFileId], references: [id], onDelete: SetNull)
+  mediaFileId     String?
+  mediaFile       FileAsset? @relation("LessonMediaFile", fields: [mediaFileId], references: [id], onDelete: SetNull)
+  progress        LessonProgress[]
+  exams           Exam[]
+  products        Product[]
+
+  @@index([unitId])
+  @@index([pdfFileId])
+  @@index([mediaFileId])
+}
+
+model Exam {
+  id               String   @id @default(cuid())
+  unitId           String?
+  lessonId         String?
+  title            String
+  description      String?
+  passingScore     Int      @default(60)
+  timeLimitMinutes Int?
+  isPublished      Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  unit             Unit?    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  lesson           Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions        Question[]
+  attempts         ExamAttempt[]
+  products         Product[]
+
+  @@index([unitId])
+  @@index([lessonId])
+}
+
+model Question {
+  id             String        @id @default(cuid())
+  examId         String
+  type           QuestionType
+  prompt         String
+  explanation    String?
+  expectedAnswer String?
+  points         Int           @default(1)
+  sortOrder      Int           @default(0)
+  exam           Exam          @relation(fields: [examId], references: [id], onDelete: Cascade)
+  options        AnswerOption[]
+
+  @@index([examId])
+}
+
+model AnswerOption {
+  id         String   @id @default(cuid())
+  questionId String
+  text       String
+  isCorrect  Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+model Product {
+  id            String      @id @default(cuid())
+  name          String
+  description   String?
+  type          ProductType
+  priceCents    Int
+  currency      String      @default("EGP")
+  durationDays  Int?
+  subjectId     String?
+  courseId      String?
+  unitId        String?
+  lessonId      String?
+  examId        String?
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  subject       Subject?    @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  course        Course?     @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  unit          Unit?       @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  lesson        Lesson?     @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  exam          Exam?       @relation(fields: [examId], references: [id], onDelete: SetNull)
+  paymentRequests PaymentRequest[]
+  accessGrants  AccessGrant[]
+
+  @@index([type])
+}
+
+model PaymentRequest {
+  id                String        @id @default(cuid())
+  userId            String
+  productId         String
+  amountCents       Int
+  method            PaymentMethod
+  reference         String
+  note              String?
+  status            PaymentStatus @default(PENDING)
+  adminNote         String?
+  createdAt         DateTime      @default(now())
+  reviewedAt        DateTime?
+  reviewedById      String?
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product           Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  reviewedBy        User?         @relation("ReviewedPayments", fields: [reviewedById], references: [id], onDelete: SetNull)
+  accessGrant       AccessGrant?
+
+  @@unique([userId, reference])
+  @@index([userId])
+  @@index([status])
+}
+
+model AccessGrant {
+  id                    String         @id @default(cuid())
+  userId                String
+  productId             String
+  paymentRequestId      String?        @unique
+  grantedAt             DateTime       @default(now())
+  expiresAt             DateTime?
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product               Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  paymentRequest        PaymentRequest? @relation(fields: [paymentRequestId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, productId])
+  @@index([userId])
+}
+
+model ExamAttempt {
+  id          String   @id @default(cuid())
+  examId      String
+  userId      String
+  answers     Json
+  score       Int
+  maxScore    Int
+  passed      Boolean  @default(false)
+  feedback    Json
+  submittedAt DateTime @default(now())
+  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([examId])
+  @@index([userId])
+}
+
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  completedAt DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+}

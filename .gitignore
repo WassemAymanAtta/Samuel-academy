@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+
+# Local secrets and machine-specific env files
+.env
+.env.*
+!.env.example
+
+# Runtime uploads and QA scratch data (never part of source)
+storage/
+apps/api/storage/
+apps/api/storage/uploads/
+.playwright-mcp/
+*.tsbuildinfo
