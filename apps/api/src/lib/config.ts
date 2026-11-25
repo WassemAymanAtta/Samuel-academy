@@ -41,11 +41,12 @@ if (!Number.isInteger(maxMediaBytes) || maxMediaBytes < 1024) {
 }
 
 const jwtSecret = required('JWT_SECRET');
-if (jwtSecret.length < 16 || /change-this/i.test(jwtSecret)) {
-  throw new Error('JWT_SECRET must be a long random value (at least 16 chars, not a placeholder)');
+const isProduction = process.env.NODE_ENV === 'production';
+const jwtMinimum = isProduction ? 32 : 16;
+if (jwtSecret.length < jwtMinimum || /change-this/i.test(jwtSecret)) {
+  throw new Error(`JWT_SECRET must be a long random value (at least ${jwtMinimum} chars, not a placeholder)`);
 }
 
-const isProduction = process.env.NODE_ENV === 'production';
 const demoMode = process.env.DEMO_MODE !== 'false';
 if (isProduction && demoMode) {
   throw new Error('DEMO_MODE="false" is required in production so demo logins are never exposed');
@@ -86,6 +87,20 @@ if (!demoMode) {
   }
 }
 
+function paymentDetail(realName: string, demoName: string, demoValue: string): string {
+  if (demoMode) return required(demoName, demoValue);
+  const value = required(realName);
+  if (/^DEMO\b|change-this|01000000000/i.test(value)) {
+    throw new Error(`${realName} must contain real production payment details`);
+  }
+  return value;
+}
+
+const paymentDetails = {
+  instapay: paymentDetail('PAYMENT_INSTAPAY', 'DEMO_PAYMENT_INSTAPAY', 'DEMO - InstaPay alias: 01000000000'),
+  ewallet: paymentDetail('PAYMENT_EWALLET', 'DEMO_PAYMENT_EWALLET', 'DEMO - Vodafone Cash: 01000000000'),
+};
+
 export const config = {
   port: Number(process.env.PORT ?? 4000),
   webOrigin: required('WEB_ORIGIN', 'http://localhost:5173'),
@@ -93,10 +108,7 @@ export const config = {
   isProduction,
   demoMode,
   admin: { email: adminEmail, password: adminPassword },
-  paymentDetails: {
-    instapay: required('DEMO_PAYMENT_INSTAPAY', 'DEMO - InstaPay alias: 01000000000'),
-    ewallet: required('DEMO_PAYMENT_EWALLET', 'DEMO - Vodafone Cash: 01000000000'),
-  },
+  paymentDetails,
   cookieName: 'sa_token',
   deviceCookieName: 'sa_device',
   cookieMaxAge: 7 * 24 * 60 * 60 * 1000,

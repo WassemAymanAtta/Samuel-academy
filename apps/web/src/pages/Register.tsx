@@ -66,7 +66,7 @@ export default function Register() {
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="كلمة المرور">
-              <TextInput required minLength={8} maxLength={100} type="password" dir="ltr" className="code-ltr text-left" value={form.password} onChange={(e) => update('password', e.target.value)} placeholder="8 أحرف فأكثر" />
+              <TextInput required minLength={12} maxLength={100} type="password" dir="ltr" className="code-ltr text-left" value={form.password} onChange={(e) => update('password', e.target.value)} placeholder="12 حرفاً فأكثر" />
             </Field>
             <Field label="تأكيد كلمة المرور">
               <TextInput required type="password" dir="ltr" className="code-ltr text-left" value={form.confirm} onChange={(e) => update('confirm', e.target.value)} placeholder="••••••••" />

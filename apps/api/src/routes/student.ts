@@ -3,6 +3,7 @@ import { asyncHandler, forbidden, notFound } from '../lib/errors';
 import { requireAuth, requireStudent } from '../lib/auth';
 import { prisma } from '../lib/prisma';
 import { accessMap, lessonAccess } from '../services/access';
+import { firstAttemptIds } from '../services/examDisclosure';
 
 export const studentRouter = Router();
 studentRouter.use(requireAuth);
@@ -65,7 +66,7 @@ studentRouter.get(
       .map((course) => ({ courseId: course.id, courseTitle: course.title, lesson: course.nextLesson! }))
       .slice(0, 3);
 
-    const [grants, attempts, payments] = await Promise.all([
+    const [grants, attempts, payments, attemptMeta] = await Promise.all([
       prisma.accessGrant.findMany({
         where: { userId: user.id },
         include: { product: true },
@@ -82,7 +83,13 @@ studentRouter.get(
         include: { product: true },
         orderBy: { createdAt: 'desc' },
       }),
+      prisma.examAttempt.findMany({
+        where: { userId: user.id },
+        select: { id: true, examId: true, submittedAt: true },
+        orderBy: { submittedAt: 'asc' },
+      }),
     ]);
+    const firstIds = firstAttemptIds(attemptMeta);
 
     res.json({
       enrolled,
@@ -99,11 +106,15 @@ studentRouter.get(
         id: a.id,
         examTitle: a.exam.title,
         courseTitle: a.exam.unit?.course.title ?? a.exam.lesson?.title ?? '—',
-        score: a.score,
-        maxScore: a.maxScore,
-        percent: a.maxScore ? Math.round((a.score / a.maxScore) * 100) : 0,
-        passed: a.passed,
         submittedAt: a.submittedAt,
+        ...(firstIds.has(a.id)
+          ? {
+              score: a.score,
+              maxScore: a.maxScore,
+              percent: a.maxScore ? Math.round((a.score / a.maxScore) * 100) : 0,
+              passed: a.passed,
+            }
+          : {}),
       })),
       pendingPayments: payments.filter((p) => p.status === 'PENDING').map((p) => ({
         id: p.id,
@@ -146,7 +157,17 @@ studentRouter.get(
       include: { exam: { include: { unit: { include: { course: true } } } } },
       orderBy: { submittedAt: 'desc' },
     });
-    res.json({ attempts });
+    const firstIds = firstAttemptIds(attempts);
+    // Full attempt rows include stored answers/feedback; students only get
+    // metadata plus the first-attempt score.
+    res.json({
+      attempts: attempts.map((a) => ({
+        id: a.id,
+        submittedAt: a.submittedAt,
+        exam: a.exam,
+        ...(firstIds.has(a.id) ? { score: a.score, maxScore: a.maxScore, passed: a.passed } : {}),
+      })),
+    });
   }),
 );
 

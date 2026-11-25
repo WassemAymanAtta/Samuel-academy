@@ -6,6 +6,7 @@ import { requireAdmin, requireAuth } from '../lib/auth';
 import { prisma } from '../lib/prisma';
 import { grantExpiry } from '../services/access';
 import { slugify } from '../lib/util';
+import { securityEvent } from '../lib/logging';
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth);
@@ -97,6 +98,7 @@ const examSchema = z
     description: optionalText,
     passingScore: z.number().int().min(0).max(100).default(60),
     timeLimitMinutes: z.number().int().min(1).max(300).optional().nullable(),
+    maxAttempts: z.number().int().min(1).optional().nullable(),
     isPublished: z.boolean().default(true),
   })
   .refine((data) => !!data.unitId || !!data.lessonId, {
@@ -121,7 +123,7 @@ const questionSchema = z
     expectedAnswer: z.string().trim().max(300).optional().nullable(),
     points: z.number().int().min(1).max(20).default(1),
     sortOrder: z.number().int().default(0),
-    options: z.array(optionSchema).default([]),
+    options: z.array(optionSchema).max(50).default([]),
   })
   .superRefine((data, ctx) => {
     if (data.type === 'SHORT_ANSWER') {
@@ -268,10 +270,22 @@ adminRouter.patch(
     const student = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!student || student.role !== 'STUDENT') throw notFound('الطالب غير موجود');
 
+    // Any status transition invalidates existing sessions. Without this, a
+    // suspended student's old JWT becomes valid again after reactivation.
     const updated = await prisma.user.update({
       where: { id: student.id },
-      data: { status },
+      data: {
+        status,
+        sessionVersion: { increment: 1 },
+        sessionDeviceId: null,
+      },
       select: { id: true, name: true, email: true, status: true },
+    });
+    securityEvent('student_status_changed', req, {
+      adminId: req.user!.id,
+      studentId: updated.id,
+      fromStatus: student.status,
+      toStatus: updated.status,
     });
     res.json({ student: updated });
   }),
@@ -664,6 +678,13 @@ adminRouter.patch(
       }
 
       return reviewed;
+    });
+    securityEvent('payment_reviewed', req, {
+      adminId: req.user!.id,
+      paymentId: payment.id,
+      productId: payment.productId,
+      decision: status,
+      amountCents: payment.amountCents,
     });
 
     res.json({ payment: updated, granted: status === 'APPROVED' });

@@ -1,16 +1,16 @@
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Award, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Badge, Card, EmptyState, PageHeader, Spinner, formatDate } from '../../components/ui';
 
 interface Attempt {
-  id: string; score: number; maxScore: number; passed: boolean; submittedAt: string;
+  id: string; score?: number; maxScore?: number; passed?: boolean; submittedAt: string;
   exam: { id: string; title: string; unit?: { course: { title: string } } };
 }
 interface AttemptDetail {
-  attempt: { id: string; examTitle: string; score: number; maxScore: number; percent: number; passed: boolean; submittedAt: string };
-  feedback: Array<{ questionId: string; prompt: string; correct: boolean; explanation?: string | null }>;
+  attempt: { id: string; examTitle: string; score?: number; maxScore?: number; percent?: number; passed?: boolean; submittedAt: string };
+  feedback: Array<{ questionId: string; prompt: string }>;
 }
 
 export default function Results() {
@@ -37,21 +37,21 @@ export default function Results() {
           <div className="bg-navy p-6 text-white">
             <p className="text-xs font-bold text-teal-200">{formatDate(attempt.submittedAt)}</p>
             <h1 className="mt-1 text-2xl font-extrabold">{attempt.examTitle}</h1>
-            <div className="mt-4 flex items-center gap-4">
-              <p className="text-4xl font-extrabold">{attempt.percent}%</p>
-              <Badge tone={attempt.passed ? 'teal' : 'rose'}>{attempt.passed ? 'ناجح' : 'غير ناجح'}</Badge>
-              <p className="code-ltr text-sm text-slate-300">{attempt.score}/{attempt.maxScore}</p>
-            </div>
+            {attempt.score !== undefined && attempt.maxScore !== undefined ? (
+              <div className="mt-4 flex items-center gap-4">
+                <p className="text-4xl font-extrabold">{attempt.percent}%</p>
+                <Badge tone={attempt.passed ? 'teal' : 'rose'}>{attempt.passed ? 'ناجح' : 'غير ناجح'}</Badge>
+                <p className="code-ltr text-sm text-slate-300">{attempt.score}/{attempt.maxScore}</p>
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-slate-300">تم تسجيل المحاولة. لا يتم عرض درجات المحاولات المتكررة.</p>
+            )}
           </div>
           <div className="space-y-3 p-6">
             {feedback.length === 0 && <p className="text-sm text-muted">لا توجد مراجعة تفصيلية لهذه المحاولة.</p>}
             {feedback.map((item, index) => (
               <div key={item.questionId} className="rounded-xl border border-slate-100 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-bold text-navy">{index + 1}. {item.prompt}</p>
-                  {item.correct ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <XCircle className="h-5 w-5 text-rose-600" />}
-                </div>
-                {item.explanation && <p className="mt-2 text-xs leading-relaxed text-muted">{item.explanation}</p>}
+                <p className="text-sm font-bold text-navy">{index + 1}. {item.prompt}</p>
               </div>
             ))}
           </div>
@@ -75,14 +75,25 @@ export default function Results() {
               <thead className="bg-slate-50 text-xs font-extrabold text-muted"><tr><th className="p-4">الاختبار</th><th className="p-4">الكورس</th><th className="p-4">التاريخ</th><th className="p-4">الدرجة</th><th className="p-4">الحالة</th><th className="p-4"></th></tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {attempts.map((attempt) => {
-                  const percent = attempt.maxScore ? Math.round((attempt.score / attempt.maxScore) * 100) : 0;
+                  const hasScore = attempt.score !== undefined && attempt.maxScore !== undefined;
+                  const percent = hasScore && attempt.maxScore ? Math.round((attempt.score! / attempt.maxScore) * 100) : 0;
                   return (
                     <tr key={attempt.id} className="hover:bg-canvas">
                       <td className="p-4 font-bold text-navy">{attempt.exam.title}</td>
                       <td className="p-4 text-muted">{attempt.exam.unit?.course.title ?? '—'}</td>
                       <td className="p-4 text-muted">{formatDate(attempt.submittedAt)}</td>
-                      <td className="p-4"><span className="font-extrabold text-navy">{percent}%</span> <span className="code-ltr text-xs text-muted">{attempt.score}/{attempt.maxScore}</span></td>
-                      <td className="p-4"><Badge tone={attempt.passed ? 'teal' : 'rose'}>{attempt.passed ? 'ناجح' : 'غير ناجح'}</Badge></td>
+                      <td className="p-4">
+                        {hasScore ? (
+                          <><span className="font-extrabold text-navy">{percent}%</span> <span className="code-ltr text-xs text-muted">{attempt.score}/{attempt.maxScore}</span></>
+                        ) : (
+                          <span className="text-xs text-muted">مسجّلة</span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <Badge tone={!hasScore ? 'slate' : attempt.passed ? 'teal' : 'rose'}>
+                          {!hasScore ? 'غير متاحة' : attempt.passed ? 'ناجح' : 'غير ناجح'}
+                        </Badge>
+                      </td>
                       <td className="p-4"><Link to={`/app/results/${attempt.id}`} className="text-xs font-extrabold text-teal-dark hover:underline">مراجعة</Link></td>
                     </tr>
                   );

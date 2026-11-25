@@ -20,7 +20,6 @@ export interface QuestionFeedback {
   questionId: string;
   correct: boolean;
   earnedPoints: number;
-  correctAnswers: string[];
   explanation?: string | null;
 }
 
@@ -48,7 +47,6 @@ export function gradeQuestion(
     questionId: question.id,
     correct,
     earnedPoints: correct ? question.points : 0,
-    correctAnswers: correctIds.length ? correctIds : question.expectedAnswer ? [question.expectedAnswer] : [],
     explanation: question.explanation,
   };
 }

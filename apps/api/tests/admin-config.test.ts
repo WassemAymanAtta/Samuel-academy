@@ -16,6 +16,8 @@ const productionEnv = {
   WEB_ORIGIN: 'http://localhost:5173',
   ADMIN_EMAIL: 'owner@example.com',
   ADMIN_PASSWORD: 'Str0ng-Test-Pass!',
+  PAYMENT_INSTAPAY: 'REAL-INSTAPAY-1234567890',
+  PAYMENT_EWALLET: 'REAL-EWALLET-1234567890',
 };
 
 function loadConfig(overrides: Record<string, string>) {
@@ -48,4 +50,12 @@ test('production requires an admin password', () => {
   const result = loadConfig({ ADMIN_PASSWORD: '' });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /ADMIN_PASSWORD must be set when DEMO_MODE=false/);
+});
+
+test('production requires real payment details and a strong JWT secret', () => {
+  assert.equal(loadConfig({ PAYMENT_INSTAPAY: '' }).status, 1);
+  assert.equal(loadConfig({ PAYMENT_INSTAPAY: 'DEMO - 01000000000' }).status, 1);
+  const shortSecret = loadConfig({ JWT_SECRET: 'short-secret' });
+  assert.equal(shortSecret.status, 1);
+  assert.match(shortSecret.stderr, /at least 32 chars/);
 });

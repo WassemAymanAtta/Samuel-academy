@@ -59,9 +59,10 @@ model User {
   paymentRequests PaymentRequest[]
   reviewedPayments PaymentRequest[] @relation("ReviewedPayments")
   accessGrants   AccessGrant[]
-  lessonProgress LessonProgress[]
-  examAttempts   ExamAttempt[]
-  uploadedFiles  FileAsset[]     @relation("UploadedFiles")
+  lessonProgress      LessonProgress[]
+  examAttempts        ExamAttempt[]
+  examAttemptSessions ExamAttemptSession[]
+  uploadedFiles       FileAsset[]     @relation("UploadedFiles")
 }
 
 model FileAsset {
@@ -173,12 +174,14 @@ model Exam {
   passingScore     Int      @default(60)
   timeLimitMinutes Int?
   isPublished      Boolean  @default(true)
+  maxAttempts      Int?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   unit             Unit?    @relation(fields: [unitId], references: [id], onDelete: Cascade)
   lesson           Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   questions        Question[]
   attempts         ExamAttempt[]
+  attemptSessions  ExamAttemptSession[]
   products         Product[]
 
   @@index([unitId])
@@ -276,6 +279,25 @@ model AccessGrant {
   @@index([userId])
 }
 
+model ExamAttemptSession {
+  id             String    @id @default(cuid())
+  userId         String
+  examId         String
+  startedAt      DateTime  @default(now())
+  expiresAt      DateTime?
+  submittedAt    DateTime?
+  abandonedAt    DateTime?
+  idempotencyKey String?
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exam    Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  attempt ExamAttempt? @relation("AttemptSession")
+
+  @@unique([userId, examId, idempotencyKey])
+  @@index([userId, examId, startedAt])
+  @@index([expiresAt])
+}
+
 model ExamAttempt {
   id          String   @id @default(cuid())
   examId      String
@@ -286,11 +308,15 @@ model ExamAttempt {
   passed      Boolean  @default(false)
   feedback    Json
   submittedAt DateTime @default(now())
+  startedAt   DateTime?
+  sessionId   String?  @unique
   exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session     ExamAttemptSession? @relation("AttemptSession", fields: [sessionId], references: [id], onDelete: SetNull)
 
   @@index([examId])
   @@index([userId])
+  @@index([examId, userId, submittedAt])
 }
 
 model LessonProgress {

@@ -26,7 +26,9 @@ export function asyncHandler(handler: (req: Request, res: Response) => Promise<u
 
 export function errorHandler(error: unknown, _req: Request, res: Response, _next: NextFunction) {
   if (error instanceof ZodError) {
-    const details = error.issues.map((issue) => ({ field: issue.path.join('.'), message: issue.message }));
+    const details = error.issues
+      .slice(0, 10)
+      .map((issue) => ({ field: issue.path.join('.').slice(0, 200), message: issue.message.slice(0, 200) }));
     return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'بيانات غير صالحة', details } });
   }
 

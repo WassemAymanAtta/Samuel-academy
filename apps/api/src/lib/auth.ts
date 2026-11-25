@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import type { AccountStatus, Role, User } from '@prisma/client';
@@ -9,6 +10,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: User;
+      session?: { version: number; deviceId: string | null };
     }
   }
 }
@@ -46,24 +48,45 @@ export function setAuthCookie(res: Response, token: string) {
 /**
  * A tab that logs in stores its token in sessionStorage and sends it as a Bearer
  * header. The shared httpOnly cookie is the fallback for native media/file links.
- * The server-side sessionVersion still limits the account to one active device.
+ * Tokens are never accepted from URLs: a token in browser history or a proxy log
+ * is a leaked credential, not a media helper.
  */
 function tokenFrom(req: Request): string | undefined {
   const header = req.header('authorization');
   if (header?.startsWith('Bearer ')) return header.slice(7).trim();
-  // <video>/<audio>/<a download> cannot send headers; they carry the tab token as
-  // a query parameter instead. This is only accepted by the private file route.
-  const queryToken = req.query?.token;
-  if (typeof queryToken === 'string' && req.originalUrl.startsWith('/api/files/')) return queryToken;
   return req.cookies?.[config.cookieName] as string | undefined;
 }
 
-/** A stable, non-authorising device ID set by the API middleware. */
+function deviceKey() {
+  return createHmac('sha256', config.jwtSecret).update('samuel-device-proof-v1').digest();
+}
+
+/** Server-issued, HMAC-protected value for the httpOnly device cookie. */
+export function deviceCookieValue(deviceId: string): string {
+  const signature = createHmac('sha256', deviceKey()).update(deviceId).digest('base64url');
+  return `${deviceId}.${signature}`;
+}
+
+function verifiedDeviceId(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const separator = value.lastIndexOf('.');
+  if (separator < 1) return undefined;
+  const id = value.slice(0, separator).trim().slice(0, 64);
+  const signature = value.slice(separator + 1);
+  const expected = createHmac('sha256', deviceKey()).update(id).digest('base64url');
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return undefined;
+  return id;
+}
+
+/**
+ * Device proof is the signed httpOnly cookie only. A raw X-Device-Id header is
+ * client-controlled and is deliberately ignored; it previously allowed a stolen
+ * password plus a known ID to take over a session from another machine.
+ */
 export function deviceIdFrom(req: Request): string | undefined {
-  const header = req.header('x-device-id');
-  if (header?.trim()) return header.trim().slice(0, 64);
-  const cookie = req.cookies?.[config.deviceCookieName];
-  return typeof cookie === 'string' && cookie.trim() ? cookie.trim().slice(0, 64) : undefined;
+  return verifiedDeviceId(req.cookies?.[config.deviceCookieName]);
 }
 
 export function accountStatusError(status: AccountStatus) {
@@ -79,15 +102,24 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     const token = tokenFrom(req);
     if (!token) throw unauthorized();
 
-    const payload = jwt.verify(token, config.jwtSecret) as { sub?: string; sv?: unknown; did?: unknown };
-    if (!payload.sub) throw unauthorized();
+    const payload = jwt.verify(token, config.jwtSecret) as {
+      sub?: string;
+      sv?: unknown;
+      did?: unknown;
+      purpose?: unknown;
+    };
+    if (!payload.sub || payload.purpose) throw unauthorized();
 
     const user = await prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user) throw unauthorized();
-    if (!sessionIsCurrent(payload, user)) throw sessionExpired();
+    // Report the account state first so suspended users get a clear 403. The
+    // session checks still revoke that token even if the account is reactivated.
     if (user.status !== 'ACTIVE') throw accountStatusError(user.status);
+    if (!sessionIsCurrent(payload, user)) throw sessionExpired();
+    if (user.sessionDeviceId && deviceIdFrom(req) !== user.sessionDeviceId) throw sessionExpired();
 
     req.user = user;
+    req.session = { version: user.sessionVersion, deviceId: user.sessionDeviceId };
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.TokenExpiredError) {
@@ -103,10 +135,23 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
   try {
     const token = tokenFrom(req);
     if (token) {
-      const payload = jwt.verify(token, config.jwtSecret) as { sub?: string; sv?: unknown; did?: unknown };
+      const payload = jwt.verify(token, config.jwtSecret) as {
+        sub?: string;
+        sv?: unknown;
+        did?: unknown;
+        purpose?: unknown;
+      };
       if (payload.sub) {
         const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-        if (user?.status === 'ACTIVE' && sessionIsCurrent(payload, user)) req.user = user;
+        if (
+          user?.status === 'ACTIVE' &&
+          !payload.purpose &&
+          sessionIsCurrent(payload, user) &&
+          (!user.sessionDeviceId || deviceIdFrom(req) === user.sessionDeviceId)
+        ) {
+          req.user = user;
+          req.session = { version: user.sessionVersion, deviceId: user.sessionDeviceId };
+        }
       }
     }
     next();

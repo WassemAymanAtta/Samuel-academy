@@ -31,10 +31,13 @@ export function storedAuthToken() {
   return token;
 }
 
-/** Private file URLs need the tab token because media tags cannot send headers. */
+/**
+ * Private file URLs never contain a login token. The API's httpOnly session
+ * cookie is sent by media tags; API clients that cannot use cookies can request
+ * a short-lived, file-scoped token from /api/files/:id/token.
+ */
 export function privateFileUrl(fileId: string) {
-  const token = authToken ?? sessionStorage.getItem('sa_token');
-  return `${BASE}/api/files/${encodeURIComponent(fileId)}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  return `${BASE}/api/files/${encodeURIComponent(fileId)}`;
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -69,7 +72,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: unknown) => request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
+  post: <T>(path: string, body?: unknown, headers?: HeadersInit) =>
+    request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined, headers }),
+
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),

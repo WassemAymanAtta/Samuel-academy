@@ -125,9 +125,9 @@ Sample payment instructions (shown in the UI, configurable via env):
 ## 6. Useful commands
 
 ```bash
-npm run build          # builds API and web for production
+npm run build          # prisma generate, then builds API and web for production
 npm test               # API tests (auth, approval, payments, uploads, access, security, single-device, PDF)
-npm run db:migrate     # apply migrations to DATABASE_URL
+npm run db:migrate     # apply approved migrations to DATABASE_URL (SA-11 is authored but unapplied pending approval)
 npm run db:seed        # wipe and re-seed demo data (requires ALLOW_DEMO_SEED=1)
 npm run db:reset       # reset database, migrations + seed
 ```
@@ -168,6 +168,7 @@ Tests use the separate `samuel_academy_test` database and apply migrations autom
 - Prisma migration + opt-in destructive demo seed (`ALLOW_DEMO_SEED=1` and an allow-listed database name required).
 - CORS limited to `WEB_ORIGIN`, secure cookie flag in production, environment-based secrets.
 - Modular backend (`lib`, `routes`, `services`) and page-based frontend structure.
+- SA-11 durable exam attempt policy is implemented in code (attempt limits, server deadlines, idempotent sessions) with an authored additive migration; the migration remains unapplied and production approval has not been granted.
 
 ## 8. Hierarchy and access rules
 
@@ -217,10 +218,10 @@ Exams additionally support a dedicated exam-package product. Expired grants no l
 - Real payment gateway / InstaPay verification (manual MVP only).
 - Email/SMS notifications and password reset.
 - Third-party video hosting/CDN (local MP4/MP3 upload and external URLs are both supported).
-- Timed exam enforcement, question randomization, and manual grading of subjective essays.
+- Question randomization and manual grading of subjective essays (timed exam enforcement is implemented in SA-11 code, pending migration approval).
 - Discussion/comments, certificates, coupons, refunds, and multi-language (English UI).
 - Rate limiting, audit logs, and production deployment configuration.
-- A UI for admins to force-release another user's device binding, and exam attempt idempotency keys, are still open items (see `QA_REVIEW_REPORT.md`). Server-side logout revocation is implemented.
+- A UI for admins to force-release another user's device binding is still open (see `QA_REVIEW_REPORT.md`). Server-side logout revocation and durable exam attempt idempotency keys are implemented in SA-11, pending migration approval.
 
 ## 11. Project structure
 
@@ -248,6 +249,7 @@ The demo was started with `npm run dev` and last verified on **2026-11-25** afte
 - `npm run build` ✅ API + web production builds succeeded.
 - `npm test` ✅ 27/27 tests passed (auth/RBAC, payments, access, uploads, 9 security regressions, single-device, PDF and production-admin config regressions).
 - `npm run db:migrate` ✅ 6 migrations applied; no pending migrations.
+- SA-11 code and migration file are present, but the SA-11 migration remains unapplied to any shared database and production approval has not been granted.
 - Pre-change source and DB snapshot are preserved under `D:\Temp\opencode\samuel-academy-backup-20261125-014426`; Math removal used the opt-in surgical script `apps/api/scripts/remove-math.ts`, not `db:reset`.
 - `GET http://localhost:4000/api/health` → `{"ok":true,"service":"samuel-academy-api"}`.
 - `GET http://localhost:5173/` → `200`; student login → `200`.

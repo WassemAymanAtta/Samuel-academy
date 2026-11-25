@@ -2,12 +2,20 @@ import { Router } from 'express';
 import { asyncHandler, notFound } from '../lib/errors';
 import { optionalAuth } from '../lib/auth';
 import { prisma } from '../lib/prisma';
-import { accessMap, lessonAccess } from '../services/access';
+import { accessMap, activeGrants, lessonAccess, subscriptionAllows } from '../services/access';
 
 export const catalogRouter = Router();
 catalogRouter.use(optionalAuth);
 
 const fileSelect = { id: true, originalName: true, mimeType: true, sizeBytes: true } as const;
+const courseMetaSelect = {
+  id: true,
+  title: true,
+  slug: true,
+  description: true,
+  level: true,
+  sortOrder: true,
+} as const;
 
 catalogRouter.get(
   '/subjects',
@@ -17,7 +25,7 @@ catalogRouter.get(
       include: {
         courses: {
           orderBy: { sortOrder: 'asc' },
-          select: { id: true, title: true, slug: true, description: true, level: true },
+          select: courseMetaSelect,
         },
       },
     });
@@ -33,7 +41,7 @@ catalogRouter.get(
       include: {
         courses: {
           orderBy: { sortOrder: 'asc' },
-          include: { _count: { select: { units: true } } },
+          select: { ...courseMetaSelect, _count: { select: { units: true } } },
         },
       },
     });
@@ -47,18 +55,24 @@ catalogRouter.get(
   asyncHandler(async (req, res) => {
     const course = await prisma.course.findUnique({
       where: { id: req.params.id },
-      include: {
-        subject: true,
+      select: {
+        ...courseMetaSelect,
+        subject: { select: { id: true, name: true } },
         pdfFile: { select: fileSelect },
         units: {
           orderBy: { sortOrder: 'asc' },
-          include: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            sortOrder: true,
             pdfFile: { select: fileSelect },
             lessons: {
               orderBy: { sortOrder: 'asc' },
               select: {
                 id: true,
                 title: true,
+                description: true,
                 durationMinutes: true,
                 sortOrder: true,
                 isPublished: true,
@@ -77,13 +91,19 @@ catalogRouter.get(
     });
     if (!course) throw notFound('الكورس غير موجود');
 
-    let unlocked = { courses: new Set<string>(), units: new Set<string>(), lessons: new Set<string>() };
+    let lessonIds = new Set<string>();
     let completedLessonIds: string[] = [];
+    let courseUnlocked = false;
     if (req.user) {
       const map = await accessMap(req.user.id);
-      unlocked = map;
+      lessonIds = req.user.role === 'ADMIN'
+        ? new Set(course.units.flatMap((u) => u.lessons.map((l) => l.id)))
+        : map.lessons;
       if (req.user.role === 'ADMIN') {
-        unlocked.lessons = new Set(course.units.flatMap((u) => u.lessons.map((l) => l.id)));
+        courseUnlocked = true;
+      } else {
+        const grants = await activeGrants(req.user.id);
+        courseUnlocked = subscriptionAllows(grants, { courseId: course.id, subjectId: course.subject.id });
       }
       completedLessonIds = (
         await prisma.lessonProgress.findMany({
@@ -97,14 +117,14 @@ catalogRouter.get(
       ...unit,
       lessons: unit.lessons
         .filter((lesson) => lesson.isPublished || req.user?.role === 'ADMIN')
-        .map((lesson) => ({ ...lesson, unlocked: req.user?.role === 'ADMIN' || unlocked.lessons.has(lesson.id) })),
-      unlocked: req.user?.role === 'ADMIN' || unlocked.units.has(unit.id),
+        .map((lesson) => ({ ...lesson, unlocked: req.user?.role === 'ADMIN' || lessonIds.has(lesson.id) })),
+      unlocked: req.user?.role === 'ADMIN' || unit.lessons.some((lesson) => lessonIds.has(lesson.id)),
     }));
 
     res.json({
       course: { ...course, units },
       completedLessonIds,
-      unlocked: req.user?.role === 'ADMIN' || unlocked.courses.has(course.id),
+      unlocked: courseUnlocked,
     });
   }),
 );
@@ -115,8 +135,23 @@ catalogRouter.get(
     // Metadata only: never expose external video/PDF URLs or unpublished lessons here.
     const unit = await prisma.unit.findUnique({
       where: { id: req.params.id },
-      include: {
-        course: { include: { subject: true, pdfFile: { select: fileSelect } } },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        sortOrder: true,
+        courseId: true,
+        course: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            description: true,
+            level: true,
+            subject: { select: { id: true, name: true } },
+            pdfFile: { select: fileSelect },
+          },
+        },
         pdfFile: { select: fileSelect },
         lessons: {
           where: req.user?.role === 'ADMIN' ? undefined : { isPublished: true },

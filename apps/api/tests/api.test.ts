@@ -8,10 +8,13 @@ import bcrypt from 'bcryptjs';
 import { createApp } from '../src/app';
 import { prisma } from '../src/lib/prisma';
 import { config } from '../src/lib/config';
+import { authHeaders } from './helpers';
+import { resetRateLimits } from '../src/lib/rateLimit';
 
 const app = createApp();
 
 async function reset() {
+  resetRateLimits();
   await prisma.examAttempt.deleteMany();
   await prisma.lessonProgress.deleteMany();
   await prisma.accessGrant.deleteMany();
@@ -64,7 +67,7 @@ describe('Authentication and role-based authorization', { concurrency: false }, 
     const response = await agent.post('/api/auth/register').send({
       name: 'New Student',
       email: 'new@test.local',
-      password: 'Password123',
+      password: 'LearnerPass123!',
     });
     assert.equal(response.status, 201);
     assert.equal(response.body.user.role, 'STUDENT');
@@ -74,7 +77,7 @@ describe('Authentication and role-based authorization', { concurrency: false }, 
     assert.equal((await agent.get('/api/auth/me')).status, 401);
     const blockedLogin = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'new@test.local', password: 'Password123' });
+      .send({ email: 'new@test.local', password: 'LearnerPass123!' });
     assert.equal(blockedLogin.status, 403);
     assert.match(blockedLogin.body.error.message, /قيد المراجعة/);
 
@@ -89,7 +92,7 @@ describe('Authentication and role-based authorization', { concurrency: false }, 
     assert.equal(approved.status, 200);
     assert.equal(approved.body.student.status, 'ACTIVE');
 
-    const login = await agent.post('/api/auth/login').send({ email: 'new@test.local', password: 'Password123' });
+    const login = await agent.post('/api/auth/login').send({ email: 'new@test.local', password: 'LearnerPass123!' });
     assert.equal(login.status, 200);
     assert.ok(login.headers['set-cookie']?.some((c: string) => c.startsWith('sa_token=')));
     const me = await agent.get('/api/auth/me');
@@ -236,7 +239,7 @@ describe('Account approval workflow', { concurrency: false }, () => {
     const registered = await request(app).post('/api/auth/register').send({
       name: 'Rejected Applicant',
       email: 'reject-me@test.local',
-      password: 'Password123',
+      password: 'LearnerPass123!',
     });
     const rejected = await adminAgent
       .patch(`/api/admin/students/${registered.body.user.id}/status`)
@@ -246,7 +249,7 @@ describe('Account approval workflow', { concurrency: false }, () => {
 
     const login = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'reject-me@test.local', password: 'Password123' });
+      .send({ email: 'reject-me@test.local', password: 'LearnerPass123!' });
     assert.equal(login.status, 403);
     assert.match(login.body.error.message, /رفض/);
 
@@ -493,15 +496,18 @@ describe('Lesson media uploads (MP4/MP3)', { concurrency: false }, () => {
     await otherAgent.post('/api/auth/login').send({ email: other.email, password: 'Student@12345' });
     assert.equal((await otherAgent.get(`/api/files/${mp4.body.file.id}`)).status, 403);
 
-    // A tab token wins over another tab's cookie (refresh must not switch accounts),
-    // including for <video>/<audio> requests that carry the token in the query string.
-    const crossTab = await adminAgent
+    // A tab token wins over another tab's cookie when the signed device proof
+    // is present. The login token itself is never accepted in a media URL.
+    const crossTab = await request(app)
       .get('/api/auth/me')
-      .set('Authorization', `Bearer ${studentLogin.body.token}`);
+      .set(authHeaders(studentLogin.body.token));
     assert.equal(crossTab.body.user.id, f.student.id);
-    const mediaWithTabToken = await otherAgent.get(
-      `/api/files/${mp4.body.file.id}?token=${encodeURIComponent(studentLogin.body.token)}`,
-    );
-    assert.equal(mediaWithTabToken.status, 200);
+    const stolenTokenUrl = await request(app)
+      .get(`/api/files/${mp4.body.file.id}?token=${encodeURIComponent(studentLogin.body.token)}`);
+    assert.equal(stolenTokenUrl.status, 401);
+    const mediaWithDeviceProof = await request(app)
+      .get(`/api/files/${mp4.body.file.id}`)
+      .set(authHeaders(studentLogin.body.token));
+    assert.equal(mediaWithDeviceProof.status, 200);
   });
 });

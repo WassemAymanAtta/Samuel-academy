@@ -49,10 +49,15 @@ paymentRouter.post(
     const product = await prisma.product.findUnique({ where: { id: data.productId } });
     if (!product || !product.isActive) throw notFound('هذه الباقة غير متاحة حالياً');
 
+    // Check across all users, not only the current one. A global unique index
+    // is proposed separately to close the race window without an unsafe migration.
     const duplicate = await prisma.paymentRequest.findFirst({
-      where: { userId: req.user!.id, reference: data.reference, status: 'PENDING' },
+      where: {
+        reference: data.reference,
+        OR: [{ userId: req.user!.id, status: 'PENDING' }, { userId: { not: req.user!.id } }],
+      },
     });
-    if (duplicate) throw badRequest('رقم العملية مستخدم بالفعل في طلب قيد المراجعة');
+    if (duplicate) throw badRequest('رقم العملية مستخدم بالفعل في طلب آخر');
 
     let payment;
     try {

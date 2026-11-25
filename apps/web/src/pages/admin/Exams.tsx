@@ -6,7 +6,8 @@ import { Alert, Badge, Button, Card, EmptyState, Field, Modal, PageHeader, Selec
 import type { ContentTree } from './Content';
 
 interface ExamRow {
-  id: string; title: string; description: string | null; passingScore: number; isPublished: boolean;
+  id: string; title: string; description: string | null; passingScore: number;
+  timeLimitMinutes: number | null; maxAttempts: number | null; isPublished: boolean;
   unit?: { title: string; course: { title: string } } | null; lesson?: { title: string } | null;
   _count: { questions: number; attempts: number };
 }
@@ -18,10 +19,10 @@ interface ExamDetail { exam: ExamRow & { questions: Question[] } }
 
 const typeLabels: Record<string, string> = { MCQ: 'اختيار من متعدد', TRUE_FALSE: 'صح / خطأ', MULTIPLE_SELECT: 'اختيار متعدد', SHORT_ANSWER: 'إجابة قصيرة' };
 
-interface ExamForm { unitId: string; lessonId: string; title: string; description: string; passingScore: number; timeLimitMinutes: number; isPublished: boolean }
+interface ExamForm { unitId: string; lessonId: string; title: string; description: string; passingScore: number; timeLimitMinutes: number; maxAttempts: number; isPublished: boolean }
 interface QuestionForm { examId: string; type: string; prompt: string; explanation: string; expectedAnswer: string; points: number; sortOrder: number; options: Array<{ text: string; isCorrect: boolean; sortOrder: number }> }
 
-const blankExam: ExamForm = { unitId: '', lessonId: '', title: '', description: '', passingScore: 60, timeLimitMinutes: 20, isPublished: true };
+const blankExam: ExamForm = { unitId: '', lessonId: '', title: '', description: '', passingScore: 60, timeLimitMinutes: 20, maxAttempts: 0, isPublished: true };
 const blankQuestion = (examId: string): QuestionForm => ({ examId, type: 'MCQ', prompt: '', explanation: '', expectedAnswer: '', points: 1, sortOrder: 0, options: [{ text: '', isCorrect: true, sortOrder: 1 }, { text: '', isCorrect: false, sortOrder: 2 }] });
 
 export default function Exams() {
@@ -55,6 +56,7 @@ export default function Exams() {
         lessonId: form.lessonId || null,
         description: form.description || null,
         timeLimitMinutes: form.timeLimitMinutes || null,
+        maxAttempts: form.maxAttempts || null,
       };
       return id ? api.put(`/api/admin/exams/${id}`, payload) : api.post('/api/admin/exams', payload);
     },
@@ -83,7 +85,8 @@ export default function Exams() {
         unitId: exam.unit ? units.find((u) => u.title === exam.unit!.title)?.id ?? '' : '',
         lessonId: exam.lesson ? lessons.find((l) => l.title === exam.lesson!.title)?.id ?? '' : '',
         title: exam.title, description: exam.description ?? '', passingScore: exam.passingScore,
-        timeLimitMinutes: 20, isPublished: exam.isPublished,
+        timeLimitMinutes: exam.timeLimitMinutes ?? 20, maxAttempts: exam.maxAttempts ?? 0,
+        isPublished: exam.isPublished,
       } : { ...blankExam, unitId: units[0]?.id ?? '' },
     });
   }
@@ -182,9 +185,10 @@ export default function Exams() {
               <Field label="الوحدة"><Select value={examForm.form.unitId} onChange={(e) => setExamForm({ ...examForm, form: { ...examForm.form, unitId: e.target.value, lessonId: '' } })}><option value="">— لا شيء —</option>{units.map((u) => <option key={u.id} value={u.id}>{u.courseTitle} — {u.title}</option>)}</Select></Field>
               <Field label="أو درس"><Select value={examForm.form.lessonId} onChange={(e) => setExamForm({ ...examForm, form: { ...examForm.form, lessonId: e.target.value, unitId: '' } })}><option value="">— لا شيء —</option>{lessons.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</Select></Field>
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Field label="درجة النجاح %"><TextInput type="number" min={0} max={100} value={examForm.form.passingScore} onChange={(e) => setExamForm({ ...examForm, form: { ...examForm.form, passingScore: Number(e.target.value) } })} /></Field>
               <Field label="الوقت (دقائق)"><TextInput type="number" min={1} value={examForm.form.timeLimitMinutes} onChange={(e) => setExamForm({ ...examForm, form: { ...examForm.form, timeLimitMinutes: Number(e.target.value) } })} /></Field>
+              <Field label="حد المحاولات" hint="0 أو فارغ = غير محدود"><TextInput type="number" min={0} value={examForm.form.maxAttempts} onChange={(e) => setExamForm({ ...examForm, form: { ...examForm.form, maxAttempts: Number(e.target.value) } })} /></Field>
               <label className="flex items-end gap-2 pb-2 text-sm font-bold"><input type="checkbox" className="h-4 w-4 accent-teal" checked={examForm.form.isPublished} onChange={(e) => setExamForm({ ...examForm, form: { ...examForm.form, isPublished: e.target.checked } })} /> منشور</label>
             </div>
             <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setExamForm(null)}>إلغاء</Button><Button loading={saveExam.isPending}>حفظ</Button></div>
