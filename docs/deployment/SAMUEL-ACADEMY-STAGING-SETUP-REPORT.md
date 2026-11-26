@@ -25,6 +25,7 @@
 14. [Smoke test results](#14-smoke-test-results)
 15. [Blockers, risks and open decisions](#15-blockers-risks-and-open-decisions)
 16. [Next steps and sign-off](#16-next-steps-and-sign-off)
+17. [Completion update — 2026-11-26](#17-completion-update--2026-11-26)
 
 ---
 
@@ -261,6 +262,244 @@ A self-contained smoke harness (`D:\Temp\opencode\staging-smoke.cjs`) started th
 **Sign-off:** Staging database, backup/restore, SA-11 migration, synthetic data, configuration, tests and local production-mode smoke checks are complete. Live Staging deployment remains blocked on provider authentication.
 
 > # FINAL VERDICT: PARTIALLY COMPLETE
+
+---
+
+## 17. Completion update — 2026-11-26
+
+This section records the continuation performed after the original setup report. The original history above (§1–§16) is preserved unchanged; the earlier `PARTIALLY COMPLETE` sign-off in §16 was written before deployment and is superseded by the results below. Final verification timestamp: **2026-11-26T00:28Z** UTC (session date 2026-11-26 local).
+
+Earlier in this continuation, a harness permission layer initially rejected the approved `git push`. Owner approval was later honored, the branch was pushed, and both Vercel deployments completed; all “not deployed / push rejected / Render-hosted” statements from that earlier snapshot are superseded by this section.
+
+### 17.1 Final architecture and provider regions
+
+| Layer | Provider / region | Staging resource | Status |
+|---|---|---|---|
+| Database | Neon `aws-eu-central-1` (Frankfurt), PostgreSQL 18.7 | Project `samuel-academy-staging` / `quiet-king-99299808`; DB `samuel_academy_staging`; primary branch `br-raspy-rain-bhxziymc` | ✅ Verified live |
+| API | Vercel Node runtime (Express adapter), global edge network | Project `samuel-academy-staging-api` / `prj_381kRehce7F0V4iuVFZMzVAniwsh`; root `apps/api`; deployment `xMFy4dHyzuegVFxSd43zrJJRzoap` | ✅ Ready, Production, 23s |
+| Web | Vercel, `WM_Solutions` team | Project `samuel-academy-staging` / `prj_14S660gqBENdEXaWCWodFansofdF`; root `apps/web`; latest deployment `GYnCvKrt7nR8cnB6UcNVRFHN6ww8` | ✅ Ready, Production, 13s |
+| Source | GitHub `WassemAymanAtta/Samuel-academy` | `staging/sa11-20261126` at `2cde39a03beb01f46ec0d864a0ff8729180b7310` | ✅ Pushed; `git ls-remote` matches local HEAD |
+
+Render was inspected but no service was created because billing showed no card on file and the free plan was unavailable without card verification. Railway's workspace trial had expired and required a paid Hobby upgrade. Netlify would have required a serverless-function refactor. The owner approved Vercel for the API, so no paid tier or card verification was performed.
+
+### 17.2 Actual frontend and API URLs
+
+| URL | Value |
+|---|---|
+| Canonical web origin | **https://samuel-academy-staging.vercel.app** |
+| Canonical API origin | **https://samuel-academy-staging-api.vercel.app** |
+| Additional web domains | `samuel-academy-staging-git-staging-sa11-20261126-wm-solutions.vercel.app`, `samuel-academy-staging-4i6aoh0ni-wm-solutions.vercel.app` |
+| Additional API domains | `samuel-academy-staging-api-git-staging-sa11-d4437e-wm-solutions.vercel.app`, `samuel-academy-staging-mwxzobpbe-wm-solutions.vercel.app` |
+| `.env.staging` | Local gitignored reference only; values were entered directly in provider dashboards; the file was never uploaded or committed |
+
+No hostname was invented or substituted for a real deployment URL. The built web bundle embeds the canonical API origin above.
+
+### 17.3 Resource names and non-sensitive identifiers
+
+| Resource | Identifier | Action in this continuation |
+|---|---|---|
+| Neon project | `quiet-king-99299808` (`samuel-academy-staging`) | Reused; no recreation |
+| Primary branch | `br-raspy-rain-bhxziymc` (`main`) | Reused; no reset/delete |
+| Pre-SA-11 backup | `br-odd-leaf-bhr17zph` (`staging-pre-sa11-20261126`) | Preserved; no delete |
+| Pre-SA-11 drill | `br-flat-king-bhtvfh1r` (`restore-drill-pre-sa11-20261126`) | Preserved; no delete |
+| Post-SA-11 backup | `br-bitter-rain-bhonkz6b` (`staging-post-sa11-20261126`), endpoint `ep-misty-brook-bh7l6z9x…` | Created from `main` at LSN `0/1C44A18` |
+| Post-SA-11 restore | `br-late-waterfall-bhmthz0d` (`restore-drill-post-sa11-20261126`), endpoint `ep-winter-haze-bhlsyh4p…` | Created from the new backup at LSN `0/1C49D48` |
+| Git branch / commit | `staging/sa11-20261126` / `2cde39a` | Pushed; remote and local HEAD match |
+| Vercel web deploy hooks | `staging-sa11-deploy` | Created, used twice; hook URL treated as a secret and not recorded |
+| Vercel API deploy hook | `staging-sa11-api-deploy` | Created, used once; hook URL treated as a secret and not recorded |
+| Vercel web deployments | `BRyeV8RnNggobp3NEZxeScwe2e7S`, `J8SPPfKmu7tNUvM7czmQtjA2dmWP`, `GYnCvKrt7nR8cnB6UcNVRFHN6ww8` | All Ready; latest is `GYnCvKrt7…` |
+| Vercel API deployment | `xMFy4dHyzuegVFxSd43zrJJRzoap` | Ready, Production |
+
+### 17.4 Deployment status and timestamps
+
+| Operation | Timestamp (UTC) | Result |
+|---|---|---|
+| Remote branch finally pushed and SHA verified | 2026-11-26 before 00:13Z | ✅ `2cde39a03beb01f46ec0d864a0ff8729180b7310` on `staging/sa11-20261126` |
+| Vercel web project created with Production Branch `staging/sa11-20261126` | 2026-11-26 before 00:13Z | ✅ `samuel-academy-staging`; first deployment `BRyeV8Rn…` Ready |
+| SPA rewrite added for direct client routes | 2026-11-26 before 00:13Z | ✅ Commit `de2f8f7`; redeployment `J8SPPfKmu…` Ready |
+| API project created with root `apps/api`, Express preset, `npm run db:generate` | 2026-11-26 ≈00:13Z | ✅ `samuel-academy-staging-api` |
+| API environment variables imported and API deploy hook used | 2026-11-26 ≈00:14Z | ✅ Job `mDkZTzcLuZOw3fNFjXX0`; deployment `xMFy4dHy…` Ready in 23s |
+| Web `VITE_API_URL` corrected to canonical API origin and web redeployed | 2026-11-26T00:19:36Z | ✅ Job `IxoXB89vOCGO6OLlIuKJ`; config set for Production and Preview |
+| Final web deployment Ready with updated API URL | 2026-11-26 ≈00:20Z | ✅ `GYnCvKrt7…`, Production, 13s; bundle contains canonical API origin |
+| Targeted Staging session-binding cleanup | 2026-11-26 ≈00:24Z | ✅ Cleared stale `sessionDeviceId` on the two synthetic Staging accounts only; no other rows touched |
+| Live HTTPS smoke suite | 2026-11-26 ≈00:25Z | ✅ `live-staging-smoke.cjs`: 19/19 checks passed |
+| Final read-only database re-verification | 2026-11-26 ≈00:28Z | ✅ `post-sa11-drill-verify.cjs`: 10/10 checks; no migration rerun |
+
+### 17.5 Environment-variable configuration status
+
+Names present in the gitignored local `.env.staging` reference (values intentionally omitted): `DATABASE_URL`, `DATABASE_URL_POOLED`, `PORT`, `NODE_ENV`, `DEMO_MODE`, `WEB_ORIGIN`, `VITE_API_URL`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `PAYMENT_INSTAPAY`, `PAYMENT_EWALLET`. The API project additionally received `UPLOAD_DIR=/tmp/samuel-academy-uploads` for the ephemeral Vercel filesystem.
+
+| Setting | Local Staging value status | Provider-side status |
+|---|---|---|
+| `NODE_ENV` | `production` | ✅ Set on API project; production mode confirmed by live HSTS/behavior |
+| `DEMO_MODE` | `false` | ✅ Set on API project; live `/api/auth/config` returns `demoMode:false` and demo login returns 401 |
+| `WEB_ORIGIN` | Canonical web origin, no wildcard | ✅ Set on API project; live CORS allows only the exact staging web origin |
+| `VITE_API_URL` | Canonical API origin | ✅ Web Config variable for Production and Preview; rebuilt into the served bundle; old Secret value removed |
+| `DATABASE_URL` / `DATABASE_URL_POOLED` | Staging-only Neon strings with `verify-full` | ✅ Set provider-side on API project; never printed or committed |
+| `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `PAYMENT_*` | Fresh Staging-only values | ✅ Set provider-side on API project; never printed or committed |
+| `UPLOAD_DIR` | `/tmp/samuel-academy-uploads` | ✅ Set provider-side on API project |
+| Secrets in repository / report | None | ✅ Verified in commit `8633f2a`; later commits added only config/adapter files; deploy hook URLs withheld |
+
+### 17.6 Database identity verification evidence
+
+Read-only verification was repeated against the Staging endpoint before the new backup work, and again after both deployments were Ready:
+
+| Check | Observed value |
+|---|---|
+| Host | `ep-orange-morning-bh63idpn.c-10.eu-central-1.aws.neon.tech` |
+| `current_database()` | `samuel_academy_staging` |
+| `current_user` | `samuel_academy_staging_owner` |
+| Server version | PostgreSQL 18.7 |
+| `_prisma_migrations` | Present; 7 rows after migration deployment |
+| SA-11 row | `20261125130000_sa11_exam_attempt_policy`, `finished_at = 2026-11-25 23:08:39.537644+00`, `rolled_back_at = null`, `applied_steps_count = 1` |
+| `npx prisma migrate status` | “Database schema is up to date!”, 7 migrations found |
+
+The verification script (`post-sa11-drill-verify.cjs`) returned **10/10** checks passed on the primary Staging database, covering identity, migration state, SA-11 columns, `ExamAttemptSession` table, five expected constraints, indexes, fixture counts, session/attempt linkage and the admin fixture. The final post-deployment re-run was also **10/10**; no migration was reapplied.
+
+### 17.7 Pre-migration backup and restore evidence
+
+Preserved from the original run: branch `br-odd-leaf-bhr17zph` from `main` at LSN `0/19F5128` and drill branch `br-flat-king-bhtvfh1r` from the backup at LSN `0/19FA6B0`, both created before SA-11 was applied at `23:08:39Z`. Both branches still exist and were not deleted.
+
+### 17.8 Post-migration backup and restore evidence
+
+| Check | Result |
+|---|---|
+| New backup branch `staging-post-sa11-20261126` | ✅ Created from `main` at LSN `0/1C44A18`, state `ready` |
+| New restore target `restore-drill-post-sa11-20261126` | ✅ Created from the backup at LSN `0/1C49D48`, state `ready` |
+| Current Staging database untouched | ✅ No reset, overwrite or destructive operation |
+| Backup branch verification | ✅ 10/10 checks, including SA-11 applied and all fixtures |
+| Restored target verification | ✅ 10/10 checks: identity `samuel_academy_staging` / owner role; 7 migrations; SA-11 row applied and not rolled back; `Exam.maxAttempts`, `ExamAttempt.startedAt`, `ExamAttempt.sessionId`; `ExamAttemptSession` table; 5 constraints; 6 indexes; fixture counts `users=4, subjects=1, courses=1, units=1, lessons=1, exams=1, questions=1, products=1, payments=1, sessions=1, attempts=1`; student/admin exam session linked to one attempt with `maxAttempts=2`, expiry set and score recorded |
+| Read-only application smoke against restored target | ⛔ Not run: a practical focused harness would require starting the API against the drill connection string; schema/data verification was completed instead |
+
+Both new branches are retained; no retention decision has been made, so nothing was deleted.
+
+### 17.9 SA-11 migration status and checksum
+
+| Check | Result |
+|---|---|
+| Migration file SHA-256 | ✅ `70366A1EA8B6EEAF898599F172B74E3A0DB96B4BEF52D1551F732092CDA0092F` (unchanged) |
+| Applied migrations | ✅ 7/7, “Database schema is up to date” |
+| SA-11 row on primary, backup and restore target | ✅ Present, not rolled back, same `finished_at` |
+| Schema objects | ✅ `ExamAttemptSession` table, FK/PK constraints, `Exam_maxAttempts_positive`, indexes |
+
+Policy behaviour is covered by `apps/api/tests/sa11-attempts.test.ts`, which includes unlimited attempts for `NULL`, finite limits, concurrent starts/submissions, idempotent replay, server-clock timeouts, abandoned sessions, ownership enforcement, no per-question correctness disclosure and stored-answer integrity. The full suite passed in this continuation (below).
+
+### 17.10 Test commands and actual results
+
+| Command | Result |
+|---|---|
+| `npx prisma migrate status --schema apps/api/prisma/schema.prisma` | ✅ 7 migrations found; schema up to date |
+| `npm test` | ✅ 58 tests, 9 suites, 0 failed, 0 skipped (41.3 s) |
+| `node post-sa11-drill-verify.cjs <primary>` | ✅ 10/10 checks (twice, including after deployment) |
+| `node post-sa11-drill-verify.cjs <post-SA-11 backup>` | ✅ 10/10 checks |
+| `node post-sa11-drill-verify.cjs <post-SA-11 restore>` | ✅ 10/10 checks |
+| `npm audit --json` | ⚠️ 7 advisories: 2 moderate, 5 high |
+| `npm run build` | ✅ Passed earlier in this engagement (API `tsc`, web `tsc -b && vite build`) |
+| `staging-smoke.cjs` (`NODE_ENV=production`) | ✅ 14/14 local checks |
+| `live-staging-smoke.cjs` | ✅ 19/19 live HTTPS checks |
+| Live `curl` header/CORS checks | ✅ 200 health, 204 preflight, exact origin, HSTS, secure cookie |
+| Served-client asset scan | ✅ Canonical API origin present; no localhost/ngrok/onrender/placeholder patterns |
+| Public-page browser load | ✅ `/login` and `/dashboard` return 200; no JS exceptions |
+
+### 17.11 Public smoke-test results
+
+| Area | Status |
+|---|---|
+| Frontend HTTPS load | ✅ `https://samuel-academy-staging.vercel.app/login` and `/dashboard` both return HTTP 200 HTML; Vercel HSTS `max-age=63072000; includeSubDomains; preload` |
+| SPA direct routing | ✅ `apps/web/vercel.json` rewrite serves `index.html` for client routes; direct `/dashboard` load works |
+| Built client configuration | ✅ `/assets/index-OmdSFcPX.js` contains `https://samuel-academy-staging-api.vercel.app` |
+| Old host/placeholder search | ✅ No localhost, `127.0.0.1`, ngrok, `onrender.com`, demo payment placeholder or `change-this` string in the served bundle |
+| API health | ✅ `GET /api/health` → 200 JSON `{ ok: true, service: "samuel-academy-api" }`, `Cache-Control: no-store`, `X-Request-ID`, API HSTS `max-age=31536000; includeSubDomains` |
+| Secure cookies | ✅ `sa_device` and session cookie flags include `HttpOnly; Secure; SameSite=Lax` |
+| CORS | ✅ Preflight from exact web origin → 204 with `Access-Control-Allow-Origin: https://samuel-academy-staging.vercel.app` and `Access-Control-Allow-Credentials: true`; unknown origin receives no `Access-Control-Allow-Origin` |
+| Config and demo mode | ✅ `/api/auth/config` reports `demoMode:false`, synthetic payment details, and no `JWT_SECRET`/`ADMIN_PASSWORD` values |
+| Database connectivity via live API | ✅ Admin `/api/admin/overview` → 200 with `students=3`, `exams=1` from Neon Staging |
+| Admin/student login and RBAC | ✅ Admin login 200/`ADMIN`; student login 200/`STUDENT`; `/api/auth/me` returns matching role; anonymous admin request 401; student admin request 403 |
+| Demo rejection | ✅ Demo credentials return 401 in the live API |
+| Browser console | ✅ No JavaScript exceptions; the only console error is the expected unauthenticated `/api/auth/me` 401 on public pages, handled by `AuthContext` |
+| Aggregate live result | ✅ `live-staging-smoke.cjs` 19/19 passed; 0 failed |
+
+Local production-mode smoke results (§14) remain valid, and the live-public results above now supersede the earlier “not run” status.
+
+### 17.12 npm audit advisory-by-advisory decisions
+
+Fresh audit: `npm audit --json` → 7 advisories (2 moderate, 5 high). Every available fix is a breaking major upgrade, so none was applied silently.
+
+| Package | Installed | Path | Advisory | Severity | Scope | Reachability | Fix | Breaking | Classification |
+|---|---|---|---|---|---|---|---|---|---|
+| `@prisma/config` | 6.19.3 | `prisma → @prisma/config` (transitive) | via `deepmerge-ts`, `effect` | High | Dev/build toolchain | Not exposed at runtime; CLI reads static config | `prisma@7.10.1` | Yes (6→7) | ACCEPT TEMPORARILY; upgrade NEEDS OWNER APPROVAL |
+| `deepmerge-ts` | 7.1.5 | `prisma → @prisma/config → deepmerge-ts` | GHSA-ggr8-5vv4-36mx (stack exhaustion on recursive object graphs) | High | Dev/build toolchain | No attacker-controlled recursive config in this repo | via `prisma@7.10.1` | Yes | ACCEPT TEMPORARILY; NEEDS OWNER APPROVAL |
+| `effect` | 3.21.0 | `prisma → @prisma/config → effect` | GHSA-7589-6fvf-x4pw (ReDoS in `Schema.TemplateLiteral`) | High | Dev/build toolchain | No attacker-controlled schema strings at build time | via `prisma@7.10.1` | Yes | ACCEPT TEMPORARILY; NEEDS OWNER APPROVAL |
+| `prisma` | 6.19.3 | Direct devDependency of `apps/api` (also via `@prisma/client`) | via `@prisma/config` | High | Build/migration CLI | Runs at build/deploy against trusted schema; no request path | `prisma@7.10.1` | Yes | NEEDS OWNER APPROVAL; plan before Production |
+| `react-router` | 6.30.6 | `react-router-dom → react-router` (transitive) | GHSA-wrjc-x8rr-h8h6 (backslash open redirect), GHSA-337j-9hxr-rhxg (SSR hydration constructor injection) | Moderate | Client SPA dependency | Navigation targets are internal literals; login `from` comes from `location.pathname + search` set by the app; no SSR hydration | `react-router-dom@7.18.7` | Yes (6→7) | ACCEPT TEMPORARILY for Staging; FIX BEFORE PRODUCTION if routing changes |
+| `react-router-dom` | 6.30.6 | Direct dependency of `apps/web` | via `react-router` | Moderate | Client dependency | Same as above | `react-router-dom@7.18.7` | Yes | ACCEPT TEMPORARILY; NEEDS OWNER APPROVAL |
+| `zod` | 3.25.76 | Direct runtime dependency of `apps/api` | CVE-2023-54404 / GHSA-mrhx-c7xc-m3w5 (memory exhaustion on unconstrained arrays) | High | Runtime request validation | Partially mitigated: body limited to 1 MB and both `z.array` uses have `.max(50)`; no unconstrained array schema found | `zod@4.6.7` | Yes (3→4) | FIX BEFORE PRODUCTION; NEEDS OWNER APPROVAL for major upgrade |
+
+No `npm audit fix --force` or blanket major upgrades were run; the audit above is the fresh post-check state, so no advisory is claimed fixed.
+
+### 17.13 Security review findings
+
+- Secret scan of all 78 files in commit `8633f2a`: no `.env` files other than the documented `.env.example`, no tokens, API keys or private keys. Later commits `de2f8f7` and `2cde39a` added only SPA rewrite and Vercel adapter configuration.
+- Six pattern matches were reviewed individually and are non-secret: demo `postgresql://u:p@…` strings in `README.md`/`.env.example`/a test fixture, example `JWT_SECRET`/`ADMIN_PASSWORD` placeholders, and literal environment-variable names in the report.
+- Production remained untouched: `.env.production` was not read or modified; no Production database, credential, project or deployment was used.
+- HTTPS/TLS verified live: Vercel web HSTS `max-age=63072000; includeSubDomains; preload`, API HSTS `max-age=31536000; includeSubDomains`, secure session/device cookies, and Neon connections using `verify-full`.
+- CORS verified live: exact canonical web origin only, credentials enabled, unknown origin rejected, no wildcard.
+- Demo mode verified live: `false` from `/api/auth/config`, demo credentials rejected.
+- Deploy hook URLs and provider secret values were treated as secrets; hook names are recorded but URLs are not.
+
+### 17.14 Files changed and reasons
+
+| Path | Reason |
+|---|---|
+| `docs/deployment/SAMUEL-ACADEMY-STAGING-SETUP-REPORT.md` | This dated completion section; original report preserved |
+| `apps/web/vercel.json` | SPA rewrite so direct client routes such as `/dashboard` return `index.html` |
+| `apps/api/vercel.json` | Vercel Node rewrite to `/api/index` |
+| `apps/api/api/index.ts` | Minimal Vercel Node adapter importing the existing Express app |
+| `D:\Temp\opencode\post-sa11-drill-verify.cjs` | Read-only verifier for identity, SA-11 objects, migration state and fixtures across primary/backup/restore |
+| `D:\Temp\opencode\live-staging-smoke.cjs`, `live-staging-smoke-results.json`, `live-login-diagnostic.cjs`, `clear-staging-session-binding.cjs` | Live HTTPS verification, diagnostic and targeted Staging-only session-binding cleanup; kept outside the repo |
+| `D:\Temp\opencode\audit-summary.cjs`, `audit-summary.json`, `staging-audit.json` | Fresh advisory extraction and reachability analysis |
+| `D:\Temp\opencode\commit-secret-scan.cjs`, `commit-secret-scan.json` | Secret verification before the branch was pushed |
+| `D:\Temp\opencode\post-sa11-backup-branch.json`, `post-sa11-restore-branch.json`, `post-sa11-*-verify.json`, `post-sa11-final-verify.json`, `samuel-staging-post-*.txt` | Non-secret branch metadata, verification evidence and secret-bearing connection strings kept outside the repo |
+| Commit `8633f2a` (78 files) | SA-11 implementation, security hardening, docs, Neon skills/MCP config and prior Staging work |
+| Commits `de2f8f7`, `2cde39a` | Vercel SPA rewrite and API adapter; both pushed on `staging/sa11-20261126` |
+| `apps/web/vite.config.ts` | Earlier removal of the temporary ngrok host (retained) |
+
+No Production configuration file was changed.
+
+### 17.15 Provider resources created or reused
+
+| Provider | Created | Reused | Not created |
+|---|---|---|---|
+| Neon | Branches `staging-post-sa11-20261126` and `restore-drill-post-sa11-20261126` | Project, primary DB, role, endpoint, two pre-SA-11 branches | No new project/database; no plan upgrade |
+| GitHub | Remote branch `staging/sa11-20261126` at `2cde39a` | Existing repository and `main` baseline | No push to `main`; no force-push |
+| Vercel | Web project, API project, environment variables, two deploy hooks, multiple Ready deployments | Existing `WM_Solutions` team | No Production project or Production branch target |
+| Render / Railway / Netlify | — | Dashboards inspected only | No service created; no card verification or paid upgrade |
+
+### 17.16 Remaining manual actions
+
+1. Obtain owner approval before the breaking major upgrades (`prisma@7`, `react-router-dom@7`, `zod@4`) or any paid tier.
+2. Decide on a shared rate-limit store before scaling the Vercel API beyond a single instance/region.
+3. Decide retention for the four Neon branches; do not delete them before that decision.
+4. Optional for later: custom domain, WAF rules, monitoring/alerting and persistent object storage for uploads. None blocks Staging readiness.
+
+No deployment blocker remains.
+
+### 17.17 Remaining risks and limitations
+
+- The post-SA-11 restore drill proves recovery of the schema and the small synthetic dataset, not a large real dataset.
+- The focused read-only application smoke test against the restored database was replaced by direct schema/data verification.
+- All seven dependency advisories remain; the highest remaining practical exposure is the runtime `zod` advisory, currently limited by a 1 MB body cap and `.max(50)` array schemas.
+- Rate limiting is in-process; multiple Vercel API instances/regions would need a shared store.
+- Uploads use `/tmp/samuel-academy-uploads` on Vercel; this is acceptable for Staging but would need persistent object storage for Production.
+- The only public-page console error is the expected unauthenticated `/api/auth/me` 401, which the app handles.
+- Deploy hook URLs remain secrets; rotate them if they are ever exposed.
+- Production was not inspected or modified throughout this work.
+
+### 17.18 Final verdict
+
+**STAGING READY.** Both Vercel projects are live from `staging/sa11-20261126` at commit `2cde39a`: the web deployment `GYnCvKrt7nR8cnB6UcNVRFHN6ww8` and API deployment `xMFy4dHyzuegVFxSd43zrJJRzoap` are Ready. Live HTTPS verification passed 19/19 checks, including exact-origin credentialed CORS, HSTS, secure cookies, `DEMO_MODE=false`, admin/student login, RBAC, demo rejection, Neon DB connectivity, built-client API URL and asset/console checks. The final read-only database verification passed 10/10, 7/7 migrations remain applied, and no Production resource was touched.
+
+> # FINAL VERDICT: STAGING READY
 
 ---
 
