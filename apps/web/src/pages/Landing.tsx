@@ -133,12 +133,11 @@ export default function Landing() {
         <section id="demo" className="bg-navy py-16 text-white">
           <div className="mx-auto max-w-7xl px-5 md:px-9">
             <div className="mb-9 text-center">
-              <h2 className="text-2xl font-extrabold md:text-3xl">جرّب المنصة فوراً بحسابات تجريبية</h2>
+              <h2 className="text-2xl font-extrabold md:text-3xl">جرّب المنصة فوراً بحساب تجريبي</h2>
               <p className="mt-2 text-sm text-slate-300">جميع البيانات وأرقام الدفع أدناه تجريبية بالكامل — DEMO</p>
             </div>
             <div className="grid gap-5 md:grid-cols-2">
               {[
-                { role: 'طالب', email: 'student@samuelacademy.com', pass: 'Student@12345', icon: GraduationCap },
                 { role: 'مدير / معلم', email: 'admin@samuelacademy.com', pass: 'Admin@12345', icon: ShieldCheck },
               ].map(({ role, email, pass, icon: Icon }) => (
                 <Card key={role} className="border-0 bg-white/5 p-6 text-white backdrop-blur">
