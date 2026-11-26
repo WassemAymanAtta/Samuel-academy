@@ -150,6 +150,8 @@ This does not delete data. Confirm `row_count = 1` before proceeding.
 - [ ] `npm audit --omit=dev` clean or documented risk acceptance.
 - [ ] `.env.production` contains real `DATABASE_URL`, `WEB_ORIGIN`, fresh `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and (after SA-18) real payment details.
 - [ ] `DEMO_MODE=false`.
+- [ ] `SESSION_BINDING_ENABLED` is unset or `true` — never carry the Staging suspension into Production.
+- [ ] `DATABASE_URL` is not `samuel_academy_staging` — Staging auto-enables demo logins and suspends device binding; the real Production target restores both protections.
 - [ ] `WEB_ORIGIN` lists explicit HTTPS origins; no wildcard.
 - [ ] Temporary ngrok host removed from `apps/web/vite.config.ts` after the trial (SA-26).
 - [ ] Admin credentials not shared with students.

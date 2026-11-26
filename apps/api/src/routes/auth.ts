@@ -93,24 +93,27 @@ authRouter.post(
       throw accountStatusError(user.status);
     }
 
-    // Bind the account to the first device that signs in. A correct password on a
-    // different device cannot take over the account or reach paid content.
+    // Device binding is preserved for Production and can be disabled explicitly
+    // on Staging while demo accounts are being tested.
     const deviceId = deviceIdFrom(req);
-    if (!deviceId) throw unauthorized('تعذّر تحديد الجهاز، حاول مرة أخرى');
-    if (user.sessionDeviceId && user.sessionDeviceId !== deviceId) {
-      throw forbidden('هذا الحساب مسجل الدخول من جهاز آخر. سجّل الخروج من الجهاز الأول أو تواصل مع الإدارة');
+    if (config.sessionBindingEnabled) {
+      if (!deviceId) throw unauthorized('تعذّر تحديد الجهاز، حاول مرة أخرى');
+      if (user.sessionDeviceId && user.sessionDeviceId !== deviceId) {
+        throw forbidden('هذا الحساب مسجل الدخول من جهاز آخر. سجّل الخروج من الجهاز الأول أو تواصل مع الإدارة');
+      }
     }
+    const boundDeviceId = config.sessionBindingEnabled ? deviceId! : null;
 
     // Bump the server-side counter first, then mint a token for that version/device.
-    // Re-login from the same device invalidates the previous token on that device.
+    // A fresh login still invalidates the previous token, even when binding is off.
     const fresh = await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: user.id },
-        data: { sessionVersion: { increment: 1 }, sessionDeviceId: deviceId },
+        data: { sessionVersion: { increment: 1 }, sessionDeviceId: boundDeviceId },
       });
       return tx.user.findUniqueOrThrow({ where: { id: user.id } });
     });
-    const token = signToken(fresh, fresh.sessionVersion, deviceId);
+    const token = signToken(fresh, fresh.sessionVersion, boundDeviceId);
     securityEvent('login_success', req, { userId: fresh.id, role: fresh.role, ipHash: ipHash(req) });
     setAuthCookie(res, token);
     res.json({ user: publicUser(fresh), token });

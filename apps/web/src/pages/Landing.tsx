@@ -138,6 +138,7 @@ export default function Landing() {
             </div>
             <div className="grid gap-5 md:grid-cols-2">
               {[
+                { role: 'طالب', email: 'student@samuelacademy.com', pass: 'Student@12345', icon: GraduationCap },
                 { role: 'مدير / معلم', email: 'admin@samuelacademy.com', pass: 'Admin@12345', icon: ShieldCheck },
               ].map(({ role, email, pass, icon: Icon }) => (
                 <Card key={role} className="border-0 bg-white/5 p-6 text-white backdrop-blur">

@@ -47,11 +47,6 @@ if (jwtSecret.length < jwtMinimum || /change-this/i.test(jwtSecret)) {
   throw new Error(`JWT_SECRET must be a long random value (at least ${jwtMinimum} chars, not a placeholder)`);
 }
 
-const demoMode = process.env.DEMO_MODE !== 'false';
-if (isProduction && demoMode) {
-  throw new Error('DEMO_MODE="false" is required in production so demo logins are never exposed');
-}
-
 function databaseName(url: string): string {
   try {
     return decodeURIComponent(new URL(url).pathname.replace(/^\//, ''));
@@ -59,8 +54,28 @@ function databaseName(url: string): string {
     return '';
   }
 }
+const currentDatabase = databaseName(process.env.DATABASE_URL ?? '');
+const isStagingDatabase = currentDatabase === 'samuel_academy_staging';
+
+// Device-bound sessions stay ON for every database except the isolated Staging
+// one. Production keeps the protection automatically; Staging can also opt out
+// explicitly with SESSION_BINDING_ENABLED=false.
+const sessionBindingEnabled = process.env.SESSION_BINDING_ENABLED
+  ? process.env.SESSION_BINDING_ENABLED !== 'false'
+  : !isStagingDatabase;
+
+// DEMO_MODE is forbidden in production. The isolated Staging database enables
+// demo logins automatically and cannot be turned back into a production target
+// by a stray environment variable; a real production database never gets demo
+// logins, regardless of any staging-related flag.
+const stagingDemoOverride = isStagingDatabase;
+const demoMode = isStagingDatabase || process.env.DEMO_MODE !== 'false';
+if (isProduction && demoMode && !stagingDemoOverride) {
+  throw new Error('DEMO_MODE="false" is required in production so demo logins are never exposed');
+}
+
 const demoDatabases = new Set(['samuel_academy', 'samuel_academy_test']);
-if (isProduction && demoDatabases.has(databaseName(process.env.DATABASE_URL ?? ''))) {
+if (isProduction && demoDatabases.has(currentDatabase)) {
   throw new Error('Refusing to start in production against a demo database; set DATABASE_URL to the production database');
 }
 
@@ -107,6 +122,8 @@ export const config = {
   jwtSecret,
   isProduction,
   demoMode,
+  sessionBindingEnabled,
+  stagingDemoOverride,
   admin: { email: adminEmail, password: adminPassword },
   paymentDetails,
   cookieName: 'sa_token',

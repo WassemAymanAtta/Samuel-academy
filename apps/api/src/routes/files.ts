@@ -29,7 +29,10 @@ async function fileAuth(req: Request, res: Response, next: NextFunction) {
     if (user.sessionVersion !== payload.sv || user.sessionDeviceId !== payload.did) {
       throw unauthorized('رابط الملف غير صالح أو منتهي');
     }
-    if (deviceIdFrom(req) !== (user.sessionDeviceId ?? undefined)) {
+    if (
+      config.sessionBindingEnabled &&
+      deviceIdFrom(req) !== (user.sessionDeviceId ?? undefined)
+    ) {
       throw unauthorized('رابط الملف غير صالح أو منتهي');
     }
     req.user = user;

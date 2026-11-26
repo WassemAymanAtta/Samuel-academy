@@ -7,6 +7,7 @@ import { errorMessage, useAuth } from '../context/AuthContext';
 import { usePublicConfig } from '../hooks/usePublicConfig';
 
 const demoAccounts = [
+  { label: 'طالب', email: 'student@samuelacademy.com', password: 'Student@12345' },
   { label: 'مدير / معلم', email: 'admin@samuelacademy.com', password: 'Admin@12345' },
 ];
 

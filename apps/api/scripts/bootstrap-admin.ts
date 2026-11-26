@@ -15,11 +15,12 @@ function currentDatabase(): string {
 }
 
 async function main() {
-  const isDemoDatabase = ['samuel_academy', 'samuel_academy_test'].includes(currentDatabase());
-  if (config.demoMode && !isDemoDatabase) {
+  const isLocalDemoDatabase = ['samuel_academy', 'samuel_academy_test'].includes(currentDatabase());
+  const isStagingDemo = config.stagingDemoOverride;
+  if (config.demoMode && !isLocalDemoDatabase && !isStagingDemo) {
     throw new Error('Demo mode may only bootstrap the admin account on a demo database.');
   }
-  if (!config.demoMode && isDemoDatabase) {
+  if (!config.demoMode && (isLocalDemoDatabase || isStagingDemo)) {
     throw new Error('Refusing to bootstrap the production admin on a demo database; set DATABASE_URL first.');
   }
 

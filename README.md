@@ -85,6 +85,8 @@ The credentials in section 5 are for the local demo trial only. For production:
 
 The admin logs in at `/login` with `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Demo credential cards on the landing page and login page are rendered **only** when `DEMO_MODE=true`, so the production password is never sent to the browser. The API refuses to start in production if `DEMO_MODE` is missing/true, if `DATABASE_URL` points at a demo database, or if admin credentials are missing/placeholder values. Never share the production admin credentials with students.
 
+**Temporary Staging behaviour:** when `DATABASE_URL` points at the isolated `samuel_academy_staging` database, demo logins are enabled automatically and device binding is suspended so the demo admin/student accounts can be used from any device. This is keyed to the database name, not to a deploy flag. Pointing Production at its real database automatically restores `DEMO_MODE=false` and one-device sessions; Production must not set `SESSION_BINDING_ENABLED=false`.
+
 ## 5. Demo accounts (all data is DEMO)
 
 | Role | Email | Password |
@@ -163,7 +165,7 @@ Tests use the separate `samuel_academy_test` database and apply migrations autom
 - Role checks enforced on every admin route; students receive 403 on admin APIs.
 - Access decisions made on the server from `AccessGrant` rows — never from localStorage; private PDFs, videos and audio are checked against the same access map.
 - Each tab stores its JWT in `sessionStorage` and sends it as a Bearer token; private file URLs append it as a query token because native `<video>`/`<audio>` elements cannot send headers.
-- **One device per account:** `User.sessionVersion` + `sessionDeviceId` plus a `sa_device` cookie and `sv`/`did` claims in the JWT. A correct password on a second device is refused with `403`; signing in again from the same device invalidates its previous token; logout bumps the version, clears the binding and revokes old tokens immediately.
+- **One device per account:** `User.sessionVersion` + `sessionDeviceId` plus a `sa_device` cookie and `sv`/`did` claims in the JWT. A correct password on a second device is refused with `403`; signing in again from the same device invalidates its previous token; logout bumps the version, clears the binding and revokes old tokens immediately. This protection is preserved for Production; `SESSION_BINDING_ENABLED=false` suspends it on Staging only.
 - **Dark mode:** class-based Tailwind theme with semantic CSS variables, `localStorage` persistence, system-preference fallback and no first-paint flash.
 - Prisma migration + opt-in destructive demo seed (`ALLOW_DEMO_SEED=1` and an allow-listed database name required).
 - CORS limited to `WEB_ORIGIN`, secure cookie flag in production, environment-based secrets.

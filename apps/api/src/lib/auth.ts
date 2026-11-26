@@ -116,7 +116,11 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     // session checks still revoke that token even if the account is reactivated.
     if (user.status !== 'ACTIVE') throw accountStatusError(user.status);
     if (!sessionIsCurrent(payload, user)) throw sessionExpired();
-    if (user.sessionDeviceId && deviceIdFrom(req) !== user.sessionDeviceId) throw sessionExpired();
+    if (
+      config.sessionBindingEnabled &&
+      user.sessionDeviceId &&
+      deviceIdFrom(req) !== user.sessionDeviceId
+    ) throw sessionExpired();
 
     req.user = user;
     req.session = { version: user.sessionVersion, deviceId: user.sessionDeviceId };
@@ -147,7 +151,9 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
           user?.status === 'ACTIVE' &&
           !payload.purpose &&
           sessionIsCurrent(payload, user) &&
-          (!user.sessionDeviceId || deviceIdFrom(req) === user.sessionDeviceId)
+          (!config.sessionBindingEnabled ||
+            !user.sessionDeviceId ||
+            deviceIdFrom(req) === user.sessionDeviceId)
         ) {
           req.user = user;
           req.session = { version: user.sessionVersion, deviceId: user.sessionDeviceId };
